@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>BL Lokalizator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" />
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f3;
+      --surface: #ffffff;
+      --surface2: #f0efeb;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --text: #1a1a18;
+      --text2: #6b6b67;
+      --text3: #9b9b96;
+      --blue: #185fa5;
+      --blue-bg: #e6f1fb;
+      --blue-text: #0c447c;
+      --green: #0f6e56;
+      --green-bg: #e1f5ee;
+      --green-text: #085041;
+      --red: #a32d2d;
+      --red-bg: #fcebeb;
+      --red-text: #791f1f;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a18;
+        --surface: #242422;
+        --surface2: #2e2e2b;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --text: #f0efe8;
+        --text2: #a0a09a;
+        --text3: #606058;
+        --blue: #85b7eb;
+        --blue-bg: #042c53;
+        --blue-text: #b5d4f4;
+        --green: #5dcaa5;
+        --green-bg: #04342c;
+        --green-text: #9fe1cb;
+        --red: #f09595;
+        --red-bg: #501313;
+        --red-text: #f7c1c1;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: var(--font);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    .topbar-sub { font-size: 12px; color: var(--text2); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text3); display: inline-block; flex-shrink: 0;
+    }
+    .status-dot.ok { background: #1d9e75; }
+    .status-dot.err { background: #e24b4a; }
+
+    .settings-btn {
+      background: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 7px 12px;
+      font-size: 13px;
+      color: var(--text2);
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .counter-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .counter-card.queue-active .counter-val { color: #e8a317; }
+    .counter-card.err-active .counter-val { color: #e5484d; }
+    .outbox-wrap { width: 100%; }
+    .outbox-head { display:flex; justify-content:space-between; align-items:center; }
+    .outbox-item {
+      background: rgba(229,72,77,0.10); border: 0.5px solid #e5484d; border-radius: var(--radius);
+      padding: 10px 12px; margin-bottom: 6px; display:flex; gap:8px; align-items:center; justify-content:space-between;
+    }
+    .outbox-item.retrying { background: rgba(232,163,23,0.10); border-color: #e8a317; }
+    .outbox-item .ob-main { flex:1; min-width:0; }
+    .outbox-item .ob-name { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .outbox-item .ob-sub { font-size:11px; color:var(--text3); word-break:break-word; }
+    .ob-btn { background:var(--surface); color:var(--text); border:0.5px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
+    .verify-btn { width:100%; padding:12px; border-radius:var(--radius); border:0.5px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; cursor:pointer; }
+    .verify-box { width:100%; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:12px; font-size:13px; color:var(--text); }
+    .verify-box .v-ok { color:#2e9e5b; font-weight:600; }
+    .verify-box .v-bad { color:#e5484d; font-weight:600; }
+    .verify-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:6px 0; border-top:0.5px solid var(--border); }
+    .counter-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+    }
+    .counter-val { font-size: 26px; font-weight: 600; color: var(--text); }
+    .counter-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .state-card {
+      width: 100%;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .state-icon { font-size: 48px; color: var(--text3); }
+    .state-icon.blue { color: var(--blue); }
+    .state-icon.green { color: var(--green); }
+    .state-icon.red { color: var(--red); }
+
+    .state-step {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+    }
+    .state-instr {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.25;
+    }
+    .state-sub {
+      font-size: 14px;
+      color: var(--text2);
+    }
+
+    .product-box {
+      width: 100%;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      text-align: left;
+    }
+    .product-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .product-sku { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 3px; }
+
+    .loc-badge {
+      background: var(--blue-bg);
+      color: var(--blue-text);
+      font-size: 20px;
+      font-weight: 600;
+      font-family: var(--mono);
+      padding: 8px 20px;
+      border-radius: var(--radius);
+      letter-spacing: 0.06em;
+    }
+
+    .input-row {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+    }
+    .input-row input {
+      flex: 1;
+      background: var(--surface);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      font-size: 15px;
+      color: var(--text);
+      font-family: var(--font);
+      outline: none;
+    }
+    .input-row input:focus { border-color: var(--blue); }
+    .input-row button {
+      background: var(--blue-bg);
+      border: none;
+      border-radius: var(--radius);
+      padding: 11px 16px;
+      color: var(--blue-text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center;
+    }
+
+    .history-wrap { width: 100%; }
+    .history-title {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+      padding: 0 2px;
+    }
+    .history-list { display: flex; flex-direction: column; gap: 6px; }
+    .history-item {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .h-name {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      min-width: 0;
+    }
+    .h-loc {
+      font-size: 12px;
+      font-family: var(--mono);
+      background: var(--green-bg);
+      color: var(--green-text);
+      padding: 2px 8px;
+      border-radius: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .reset-btn {
+      width: 100%;
+      background: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-size: 14px;
+      color: var(--red);
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    /* Settings */
+    .settings-panel {
+      width: 100%;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .settings-row { display: flex; flex-direction: column; gap: 6px; }
+    .settings-label { font-size: 13px; color: var(--text2); }
+    .settings-row input, .settings-row select {
+      background: var(--surface2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: var(--font);
+      outline: none;
+      width: 100%;
+    }
+    .settings-row input:focus { border-color: var(--blue); }
+    .save-btn {
+      width: 100%;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .back-btn {
+      width: 100%;
+      background: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-size: 14px;
+      color: var(--text2);
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .scan-field-wrap {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+    }
+    #scan-field {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 13px 14px;
+      font-size: 16px;
+      color: var(--text);
+      font-family: var(--font);
+      outline: none;
+    }
+    #scan-field:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-bg);
+    }
+
+    .hidden { display: none !important; }
+
+    /* Ostrzeżenie o wielu sztukach */
+    .multi-stock-warning {
+      width: 100%;
+      background: #fff8ed;
+      border: 1.5px solid #f59e0b;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .multi-stock-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #92400e;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .multi-stock-header i { font-size: 16px; color: #f59e0b; }
+    .existing-locs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .existing-loc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .existing-loc-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #78350f;
+    }
+    .remove-loc-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #92400e;
+      font-size: 22px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+    }
+    .remove-loc-btn:hover { background: #fde68a; }
+
+    .cancel-btn {
+      width: 100%;
+      background: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 11px;
+      font-size: 14px;
+      color: var(--red);
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .save-product-btn {
+      width: 100%;
+      background: var(--green);
+      border: none;
+      border-radius: var(--radius);
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .save-product-btn:active { opacity: 0.85; }
+
+
+    .mode-bar { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .mode-btn { padding:10px; border-radius:var(--radius); border:0.5px solid var(--border); background:var(--surface); color:var(--text2); font-size:14px; font-family:var(--font); cursor:pointer; }
+    .mode-btn.active { background:#1d9e75; border-color:#1d9e75; color:#fff; font-weight:600; }
+    .mode-inv .norm-only { display:none !important; }
+    .inv-panel { width:100%; display:flex; flex-direction:column; gap:10px; }
+    .inv-card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .inv-title { font-size:15px; font-weight:600; color:var(--text); }
+    .inv-sub { font-size:13px; color:var(--text2); }
+    .inv-loc { font-size:28px; font-weight:700; color:#1d9e75; text-align:center; letter-spacing:0.02em; }
+    .inv-loc.none { font-size:18px; color:var(--text3); font-weight:500; }
+    .inv-stats { display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:center; font-size:12px; color:var(--text2); }
+    .inv-stats b { color:var(--text); font-size:14px; }
+    .inv-stats .bad, .inv-stats .bad b { color:#e5484d; }
+    .inv-flash { font-size:13px; padding:8px 10px; border-radius:8px; background:rgba(29,158,117,0.12); color:var(--text); }
+    .inv-flash.err { background:rgba(229,72,77,0.12); color:#e5484d; }
+    .inv-list { display:flex; flex-direction:column; gap:6px; }
+    .inv-row { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+    .inv-row-main { flex:1; min-width:0; }
+    .inv-name { font-size:13px; color:var(--text); overflow-wrap:anywhere; }
+    .inv-meta { font-size:11px; color:var(--text3); overflow-wrap:anywhere; }
+    .inv-meta b { color:var(--text); }
+    .inv-meta.dim { opacity:0.8; }
+    .inv-qty { font-size:20px; font-weight:700; color:var(--text); min-width:44px; text-align:center; cursor:pointer; }
+    .inv-empty { text-align:center; color:var(--text3); font-size:13px; padding:16px; }
+    .inv-actions { display:flex; flex-direction:column; gap:8px; }
+    .inv-btn { padding:12px; border-radius:var(--radius); border:0.5px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; font-family:var(--font); cursor:pointer; }
+    .inv-btn.primary { background:#1d9e75; border-color:#1d9e75; color:#fff; font-weight:600; }
+    .inv-btn:disabled { opacity:0.45; cursor:default; }
+    .inv-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+    .inv-tab { padding:6px 10px; border-radius:16px; border:0.5px solid var(--border); background:var(--surface); color:var(--text2); font-size:12px; font-family:var(--font); cursor:pointer; }
+    .inv-tab.on { background:#1d9e75; border-color:#1d9e75; color:#fff; }
+    .inv-search { width:100%; padding:10px 12px; border-radius:var(--radius); border:0.5px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; font-family:var(--font); }
+    .inv-bar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+    .inv-row.rep { align-items:flex-start; }
+    .inv-row.rep input[type=checkbox] { margin-top:3px; width:18px; height:18px; }
+    .st-badge { font-size:10px; padding:2px 6px; border-radius:10px; margin-left:4px; white-space:nowrap; }
+    .st-badge.ok { background:rgba(29,158,117,0.15); color:#1d9e75; }
+    .st-badge.diff { background:rgba(232,163,23,0.18); color:#b8860b; }
+    .st-badge.missing { background:rgba(229,72,77,0.15); color:#e5484d; }
+    .st-badge.manual { background:rgba(120,120,200,0.18); color:#6b6bd6; }
+    .st-badge.info { background:rgba(128,128,128,0.15); color:var(--text3); }
+
+
+    .mode-bar { grid-template-columns: 1fr 1fr 1fr !important; }
+    .mode-btn { font-size: 13px !important; padding: 10px 4px !important; }
+    body.locked { overflow:hidden; overscroll-behavior:none; touch-action:none; -webkit-user-select:none; user-select:none; padding-bottom:64px; }
+    .lock-bar { position:fixed; left:0; right:0; bottom:0; z-index:9999; background:rgba(20,20,20,0.92); color:#fff; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; }
+    .lock-hold { position:relative; overflow:hidden; border:1px solid #888; background:#333; color:#fff; border-radius:8px; padding:10px 14px; font-size:13px; font-family:var(--font); touch-action:none; min-width:150px; }
+    .lock-fill { position:absolute; left:0; top:0; bottom:0; width:0; background:#1d9e75; }
+    .lock-txt { position:relative; }
+
+    /* Spinner animation */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { display: inline-block; animation: spin 1s linear infinite; }
+  </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1d9e75">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">BL Lokalizator</div>
+      <div class="topbar-sub">
+        <span class="status-dot" id="conn-dot"></span>
+        <span id="conn-label">Nie skonfigurowano</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="settings-btn" id="lock-btn" onclick="lockScreen()">🔒 Blokada</button>
+      <button class="settings-btn" onclick="toggleSettings()">
+        <i class="ti ti-settings"></i> Ustawienia
+      </button>
+    </div>
+  </div>
+  <div class="lock-bar hidden" id="lock-bar">
+    <span>🔒 Ekran zablokowany — skanuj normalnie<br><small id="lock-warn" class="hidden" style="color:#ffb454">⚠ Przeglądarka nie jest na pełnym ekranie — pasek adresu może być dostępny. Skanuj, aby wrócić na pełny ekran, albo zainstaluj aplikację na ekranie głównym.</small></span>
+    <button class="lock-hold lock-allow" id="lock-hold">
+      <span class="lock-fill" id="lock-fill"></span><span class="lock-txt">Przytrzymaj, aby odblokować</span>
+    </button>
+  </div>
+
+  <!-- MAIN SCREEN -->
+  <div class="screen" id="main-screen">
+    <div class="mode-bar">
+      <button class="mode-btn active" id="mode-norm" onclick="setMode('NORM')">Przypisywanie</button>
+      <button class="mode-btn" id="mode-inv" onclick="setMode('INV')">Inwentaryzacja</button>
+      <button class="mode-btn" id="mode-move" onclick="setMode('MOVE')">Przenoszenie</button>
+    </div>
+    <div class="counter-row">
+      <div class="counter-card">
+        <div class="counter-val" id="cnt-done">0</div>
+        <div class="counter-lbl">zapisanych</div>
+      </div>
+      <div class="counter-card" id="cnt-q-card">
+        <div class="counter-val" id="cnt-q">0</div>
+        <div class="counter-lbl">w kolejce</div>
+      </div>
+      <div class="counter-card" id="cnt-err-card">
+        <div class="counter-val" id="cnt-err">0</div>
+        <div class="counter-lbl">błędów</div>
+      </div>
+    </div>
+
+    <div class="state-card norm-only">
+      <i class="ti state-icon blue" id="state-icon"></i>
+      <div class="state-step" id="state-step">Krok 1 z 2</div>
+      <div class="state-instr" id="state-instr">Zeskanuj produkt</div>
+      <div class="state-sub" id="state-sub">Przyłóż skaner do kodu EAN produktu</div>
+      <div class="product-box hidden" id="product-box">
+        <div class="product-name" id="p-name"></div>
+        <div class="product-sku" id="p-sku"></div>
+      </div>
+      <div class="multi-stock-warning hidden" id="multi-stock-warning">
+        <div class="multi-stock-header">
+          <i class="ti ti-alert-triangle"></i>
+          <span id="multi-stock-label">Na magazynie: ? szt. — aktualne lokalizacje:</span>
+        </div>
+        <div class="existing-locs" id="existing-locs"></div>
+      </div>
+      <div class="loc-badge hidden" id="loc-badge"></div>
+    </div>
+
+    <div class="scan-field-wrap">
+      <input
+        type="text"
+        id="scan-field"
+        placeholder="Zeskanuj lub wpisz kod..."
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        inputmode="none"
+      />
+      <button onclick="submitScanField()"><i class="ti ti-arrow-right"></i></button>
+    </div>
+
+    <div class="inv-panel hidden" id="inv-panel"></div>
+    <div class="inv-panel hidden" id="move-panel"></div>
+
+    <button class="cancel-btn hidden norm-only" id="cancel-btn" onclick="cancelProduct()">
+      <i class="ti ti-x"></i> Anuluj produkt
+    </button>
+
+    <button class="save-product-btn hidden norm-only" id="save-product-btn" onclick="saveProductNow()">
+      <i class="ti ti-device-floppy"></i> Zapisz produkt
+    </button>
+
+    <div class="outbox-wrap hidden" id="outbox-wrap">
+      <div class="history-title outbox-head">
+        <span>Niewysłane do bazy</span>
+        <button class="ob-btn" onclick="retryAll()">Ponów wszystkie</button>
+      </div>
+      <div id="outbox-list"></div>
+    </div>
+
+    <button class="verify-btn hidden norm-only" id="verify-btn" onclick="verifySession()">
+      <i class="ti ti-shield-check"></i> Sprawdź sesję w bazie
+    </button>
+    <div class="verify-box hidden norm-only" id="verify-box"></div>
+
+    <div class="history-wrap hidden norm-only" id="history-wrap">
+      <div class="history-title">Ostatnie operacje</div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+    <button class="reset-btn hidden norm-only" id="reset-btn" onclick="resetAll()">
+      <i class="ti ti-refresh"></i> Nowa sesja
+    </button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div class="screen hidden" id="settings-screen">
+    <div class="settings-panel">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;">Konfiguracja API</div>
+      <div class="settings-row">
+        <div class="settings-label">Backend magazynowy</div>
+        <select id="backend-sel" onchange="toggleBackendFields(this.value)">
+          <option value="BASELINKER">BaseLinker</option>
+          <option value="TREEGOO">Treegoo</option>
+        </select>
+      </div>
+      <div id="bl-fields">
+      <div class="settings-row">
+        <div class="settings-label">Klucz API BaseLinker</div>
+        <input type="password" id="api-key-in" placeholder="Wklej klucz API..." autocomplete="off" />
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Inventory ID katalogu produktów</div>
+        <input type="text" id="storage-id-in" placeholder="np. 12345" />
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Warehouse ID magazynu</div>
+        <input type="text" id="warehouse-id-in" placeholder="np. 107563" />
+      </div>
+      </div>
+      <div id="tg-fields" class="hidden">
+      <div class="settings-row">
+        <div class="settings-label">Treegoo Device Token</div>
+        <input type="password" id="tg-token-in" placeholder="Wklej device token..." autocomplete="off" />
+      </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Tryb działania</div>
+        <select id="mode-sel">
+          <option value="demo">Demo — symulacja (bez zapisu)</option>
+          <option value="live">Produkcyjny — zapisuje do systemu</option>
+        </select>
+      </div>
+      <button class="save-btn" onclick="saveSettings()">
+        <i class="ti ti-check"></i> Zapisz
+      </button>
+    </div>
+    <button class="back-btn" onclick="toggleSettings()">
+      <i class="ti ti-arrow-left"></i> Wróć do skanowania
+    </button>
+  </div>
+</div>
+
+
+
+<script>
+  const STATES = { PRODUCT: 0, LOCATION: 1, SAVING: 2, SUCCESS: 3, ERROR: 4 };
+  let appState = STATES.PRODUCT;
+  let currentProduct = null;
+  let pendingLocations = [];
+  let existingLocs = [];      // lokalizacje już zapisane w BaseLinker (gdy stock > 1)
+  let originalLocs = [];      // kopia oryginalna existingLocs — do wykrywania czy było usunięcie
+  let locationTimer = null;
+  let history = [];
+
+  function renderExistingLocs() {
+    const warning = $('multi-stock-warning');
+    const container = $('existing-locs');
+    if (!currentProduct || currentProduct.stock <= 1 || existingLocs.length === 0) {
+      warning.classList.add('hidden');
+      return;
+    }
+    warning.classList.remove('hidden');
+    $('multi-stock-label').textContent = `Na magazynie: ${currentProduct.stock} szt. — aktualne lokalizacje:`;
+    container.innerHTML = existingLocs.map((loc, i) => `
+      <div class="existing-loc-row">
+        <span class="existing-loc-name">${loc}</span>
+        <button class="remove-loc-btn" onclick="removeExistingLoc(${i})" title="Usuń z pamięci">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeExistingLoc(index) {
+    existingLocs.splice(index, 1);
+    renderExistingLocs();
+    // Pokaż przycisk "Zapisz produkt" — użytkownik usunął lokalizację, musi ją zatwierdzić
+    $('save-product-btn').classList.remove('hidden');
+  }
+
+  async function saveProductNow() {
+    if (!currentProduct || appState === STATES.SAVING) return;
+    clearTimeout(locationTimer);
+    locationTimer = null;
+
+    // Połącz istniejące (po ewentualnym usunięciu) z nowymi zeskanowanymi
+    const allLocs = [...existingLocs];
+    for (const loc of pendingLocations) {
+      if (!allLocs.includes(loc)) allLocs.push(loc);
+    }
+
+    const savedProduct = currentProduct;
+    const displayLocs = allLocs.length > 0 ? allLocs.join(', ') : '(usunięto lokalizacje)';
+    $('save-product-btn').classList.add('hidden');
+
+    const job = enqueueSave(savedProduct, allLocs);   // wysyłka w tle
+    history.unshift({ product: savedProduct, location: displayLocs, jobId: job.id });
+    if (history.length > 15) history.pop();
+    renderHistory();
+    soundSaved();
+    appState = STATES.SUCCESS;
+    renderState(STATES.SUCCESS, savedProduct, displayLocs);
+    currentProduct = null;
+    pendingLocations = [];
+    existingLocs = [];
+    originalLocs = [];
+    $('cancel-btn').classList.add('hidden');
+    $('multi-stock-warning').classList.add('hidden');
+    await delay(600);
+    appState = STATES.PRODUCT;
+    renderState(STATES.PRODUCT);
+    refocus();
+  }
+  let cntDone = 0, cntErr = 0;
+  let cfg = {
+    apiKey: '', inventoryId: '', warehouseId: '107563', mode: 'live',
+    backend: 'BASELINKER',
+    treegooToken: ''
+  };
+
+  // ── WarehouseBackend abstraction ──────────────────────────────────────────
+
+  const BaseLinkerBackend = {
+    async lookupProduct(code, opts) {
+      const withLocs = !!(opts && opts.withLocs);
+      async function queryBL(filterKey, filterVal) {
+        const body = new URLSearchParams({
+          token: cfg.apiKey,
+          method: 'getInventoryProductsList',
+          parameters: JSON.stringify({ inventory_id: cfg.inventoryId, [filterKey]: filterVal })
+        });
+        const res = await fetch('https://api.baselinker.com/connector.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+        });
+        const data = await res.json();
+        if (data.status === 'SUCCESS' && data.products) {
+          const keys = Object.keys(data.products);
+          if (keys.length > 0) {
+            const productId = keys[0];
+            const p = data.products[productId];
+            const stockKey = 'bl_' + cfg.warehouseId;
+            const stock = (p.stock && p.stock[stockKey]) ? parseInt(p.stock[stockKey]) : 0;
+            let existingLocs = [];
+            if (stock > 1 || withLocs) {
+              try {
+                const bodyData = new URLSearchParams({
+                  token: cfg.apiKey,
+                  method: 'getInventoryProductsData',
+                  parameters: JSON.stringify({ inventory_id: cfg.inventoryId, products: [parseInt(productId)] })
+                });
+                const resData = await fetch('https://api.baselinker.com/connector.php', {
+                  method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: bodyData
+                });
+                const dataFull = await resData.json();
+                if (dataFull.status === 'SUCCESS' && dataFull.products && dataFull.products[productId]) {
+                  const pFull = dataFull.products[productId];
+                  const locsRaw = (pFull.locations && pFull.locations['bl_' + cfg.warehouseId]) ? pFull.locations['bl_' + cfg.warehouseId] : '';
+                  existingLocs = locsRaw ? locsRaw.split(';').map(l => l.trim()).filter(Boolean) : [];
+                } else if (withLocs) {
+                  throw new Error(dataFull.error_message || 'Nie udało się odczytać lokalizacji produktu');
+                }
+              } catch(e) { if (withLocs) throw e; }
+            }
+            return { id: productId, name: p.name, sku: p.sku, stock, existingLocs };
+          }
+        }
+        return null;
+      }
+      return (await queryBL('filter_ean', code)) || (await queryBL('filter_sku', code));
+    },
+
+    async saveLocation(productId, locations) {
+      const params = {
+        inventory_id: cfg.inventoryId,
+        product_id: productId,
+        locations: { ['bl_' + cfg.warehouseId]: locations.join(';') }
+      };
+      const body = new URLSearchParams({
+        token: cfg.apiKey,
+        method: 'addInventoryProduct',
+        parameters: JSON.stringify(params)
+      });
+      const res = await fetch('https://api.baselinker.com/connector.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+      });
+      const data = await res.json();
+      if (data.status === 'SUCCESS') {
+        const w = data.warnings;
+        const has = w && (Array.isArray(w) ? w.length : (typeof w === 'object' ? Object.keys(w).length : String(w).length));
+        if (has) return { ok: true, warnings: typeof w === 'string' ? w : JSON.stringify(w) };
+        return { ok: true };
+      }
+      return { ok: false, error: data.error_message || 'Błąd BaseLinker' };
+    },
+
+    // Odczyt stanu i lokalizacji z Base: { [productId]: { stock, locs } }
+    async readState(ids, onProgress) {
+      const out = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        const body = new URLSearchParams({
+          token: cfg.apiKey,
+          method: 'getInventoryProductsData',
+          parameters: JSON.stringify({ inventory_id: cfg.inventoryId, products: chunk.map(x => parseInt(x)) })
+        });
+        const res = await fetch('https://api.baselinker.com/connector.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+        });
+        const data = await res.json();
+        if (data.status !== 'SUCCESS') throw new Error(data.error_message || 'Błąd odczytu z BaseLinker');
+        for (const id of chunk) {
+          const p = data.products && data.products[id];
+          if (!p) continue;
+          const raw = (p.locations && p.locations['bl_' + cfg.warehouseId]) || '';
+          out[id] = {
+            stock: (p.stock && p.stock['bl_' + cfg.warehouseId] != null) ? parseInt(p.stock['bl_' + cfg.warehouseId]) || 0 : 0,
+            locs: raw ? raw.split(';').map(l => l.trim()).filter(Boolean) : []
+          };
+        }
+        if (onProgress) onProgress(Math.min(i + 50, ids.length), ids.length);
+        if (i + 50 < ids.length) await delay(1000);
+      }
+      return out;
+    },
+
+    async readLocations(ids) {
+      const st = await this.readState(ids);
+      const out = {};
+      for (const k of Object.keys(st)) out[k] = st[k].locs;
+      return out;
+    },
+
+    // Wszystkie produkty ze stanem > 0 w tym magazynie: { id: { name, sku, stock } }
+    async listStocked() {
+      const out = {};
+      for (let page = 1; page <= 60; page++) {
+        const body = new URLSearchParams({
+          token: cfg.apiKey,
+          method: 'getInventoryProductsList',
+          parameters: JSON.stringify({ inventory_id: cfg.inventoryId, page })
+        });
+        const res = await fetch('https://api.baselinker.com/connector.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+        });
+        const data = await res.json();
+        if (data.status !== 'SUCCESS') throw new Error(data.error_message || 'Błąd pobierania listy produktów');
+        const keys = Object.keys(data.products || {});
+        for (const id of keys) {
+          const p = data.products[id];
+          const st = (p.stock && p.stock['bl_' + cfg.warehouseId]) ? parseInt(p.stock['bl_' + cfg.warehouseId]) : 0;
+          if (st > 0) out[id] = { name: p.name || '', sku: p.sku || '', stock: st };
+        }
+        if (keys.length < 1000) break;
+        await delay(1000);
+      }
+      return out;
+    },
+
+    async saveStock(productId, stock) {
+      const params = {
+        inventory_id: cfg.inventoryId,
+        products: [[parseInt(productId), { ['bl_' + cfg.warehouseId]: parseInt(stock) }]]
+      };
+      const body = new URLSearchParams({
+        token: cfg.apiKey,
+        method: 'updateInventoryProductsStock',
+        parameters: JSON.stringify(params)
+      });
+      const res = await fetch('https://api.baselinker.com/connector.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+      });
+      const data = await res.json();
+      if (data.status === 'SUCCESS') {
+        const w = data.warnings;
+        const has = w && (Array.isArray(w) ? w.length : (typeof w === 'object' ? Object.keys(w).length : String(w).length));
+        if (has) return { ok: true, warnings: typeof w === 'string' ? w : JSON.stringify(w) };
+        return { ok: true };
+      }
+      return { ok: false, error: data.error_message || 'Błąd aktualizacji stanu w BaseLinker' };
+    }
+  };
+
+  const TreegooBackend = {
+    _base: 'https://app.treego24.pl/api/scanner/v1',
+    _h() { return { 'Authorization': 'Bearer ' + cfg.treegooToken, 'Content-Type': 'application/json' }; },
+
+    async lookupProduct(code) {
+      const res = await fetch(`${this._base}/products/lookup?code=${encodeURIComponent(code)}`, {
+        method: 'GET', headers: this._h()
+      });
+      if (res.status === 401) throw new Error('Treegoo: nieprawidłowy lub wyłączony token urządzenia');
+      if (!res.ok) throw new Error(`Treegoo: błąd HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.found || !data.product) return null;
+      const p = data.product;
+      return {
+        id: p.id, name: p.name, sku: p.sku,
+        stock: p.quantity || 0,
+        existingLocs: Array.isArray(p.locations) ? p.locations : []
+      };
+    },
+
+    async saveLocation(productId, locations) {
+      const res = await fetch(`${this._base}/products/${productId}/locations`, {
+        method: 'PUT', headers: this._h(),
+        body: JSON.stringify({ locations })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return { ok: false, error: err.message || `Błąd Treegoo (HTTP ${res.status})` };
+      }
+      const data = await res.json().catch(() => ({}));
+      if (data.success === false) {
+        return { ok: false, error: 'Treegoo: zapis nie powiódł się' };
+      }
+      // PUT zwraca stan końcowy — porównaj z tym, co wysłaliśmy
+      if (Array.isArray(data.locations) && !sameLocs(data.locations, locations)) {
+        return { ok: false, error: 'Treegoo: zapisana lista różni się od wysłanej' };
+      }
+      return { ok: true };
+    },
+
+    async readLocations(ids) {
+      const out = {};
+      for (const id of ids) {
+        const res = await fetch(`${this._base}/products/${id}/locations`, { method: 'GET', headers: this._h() });
+        if (!res.ok) throw new Error(`Treegoo: błąd odczytu HTTP ${res.status}`);
+        const d = await res.json().catch(() => ({}));
+        const arr = Array.isArray(d) ? d : (Array.isArray(d.locations) ? d.locations : null);
+        if (arr) out[id] = arr;
+        await delay(150);
+      }
+      return out;
+    },
+    async readState(ids) {
+      const l = await this.readLocations(ids);
+      const out = {};
+      for (const k of Object.keys(l)) out[k] = { stock: null, locs: l[k] };
+      return out;
+    },
+    async saveStock() { return { ok: false, error: 'Treegoo: aktualizacja stanów nie jest obsługiwana w tej wersji' }; }
+  };
+
+  const DemoBackend = {
+    async lookupProduct(code) {
+      await delay(350);
+      const d = DEMO_DB[code];
+      if (d) return { ...d, stock: 1, existingLocs: [] };
+      return { id: 'DEMO-' + code.slice(-5), name: 'Produkt ' + code.slice(-4), sku: 'SKU-' + code.slice(-4), stock: 1, existingLocs: [] };
+    },
+    async saveLocation(productId, locations) {
+      await delay(500);
+      return { ok: true };
+    },
+    async readLocations(ids) { return {}; },
+    async readState(ids) { return {}; },
+    async saveStock() { await delay(300); return { ok: true }; }
+  };
+
+  function getBackend() {
+    if (cfg.mode === 'demo') return DemoBackend;
+    if (cfg.backend === 'TREEGOO') return TreegooBackend;
+    return BaseLinkerBackend;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+
+  let settingsOpen = false;
+
+  const DEMO_DB = {
+    '5901234123457': { id: '12345', name: 'Kabel HDMI 2.0 2m', sku: 'KAB-HDMI-2M' },
+    '4006381333931': { id: '22222', name: 'Baterie AA Duracell 4szt', sku: 'BAT-AA-DUR4' },
+    '5901738578000': { id: '33333', name: 'Słuchawki JBL Tune 500BT', sku: 'SLU-JBL-T500' },
+    '8806092380608': { id: '44444', name: 'Ładowarka Samsung 25W USB-C', sku: 'LAD-SAM-25W' },
+  };
+
+
+
+  // Słownik lokalizacji: kod ze skanera → czytelna nazwa
+  const LOCATION_MAP = {"BLL_01000367": "R1-P1-01", "01000367": "R1-P1-01", "1000367": "R1-P1-01", "BLL_01014359": "R1-P1-02", "01014359": "R1-P1-02", "1014359": "R1-P1-02", "BLL_01014360": "R1-P1-03", "01014360": "R1-P1-03", "1014360": "R1-P1-03", "BLL_01014361": "R1-P1-04", "01014361": "R1-P1-04", "1014361": "R1-P1-04", "BLL_01014362": "R1-P1-05", "01014362": "R1-P1-05", "1014362": "R1-P1-05", "BLL_01014363": "R1-P1-06", "01014363": "R1-P1-06", "1014363": "R1-P1-06", "BLL_01014364": "R1-P1-07", "01014364": "R1-P1-07", "1014364": "R1-P1-07", "BLL_01014365": "R1-P1-08", "01014365": "R1-P1-08", "1014365": "R1-P1-08", "BLL_01014366": "R1-P1-09", "01014366": "R1-P1-09", "1014366": "R1-P1-09", "BLL_01014367": "R1-P1-10", "01014367": "R1-P1-10", "1014367": "R1-P1-10", "BLL_01014368": "R1-P1-11", "01014368": "R1-P1-11", "1014368": "R1-P1-11", "BLL_01014369": "R1-P1-12", "01014369": "R1-P1-12", "1014369": "R1-P1-12", "BLL_01014370": "R1-P1-13", "01014370": "R1-P1-13", "1014370": "R1-P1-13", "BLL_01014371": "R1-P1-14", "01014371": "R1-P1-14", "1014371": "R1-P1-14", "BLL_01014372": "R1-P1-15", "01014372": "R1-P1-15", "1014372": "R1-P1-15", "BLL_01014373": "R1-P1-16", "01014373": "R1-P1-16", "1014373": "R1-P1-16", "BLL_01014374": "R1-P1-17", "01014374": "R1-P1-17", "1014374": "R1-P1-17", "BLL_01014375": "R1-P1-18", "01014375": "R1-P1-18", "1014375": "R1-P1-18", "BLL_01014376": "R1-P1-19", "01014376": "R1-P1-19", "1014376": "R1-P1-19", "BLL_01014377": "R1-P1-20", "01014377": "R1-P1-20", "1014377": "R1-P1-20", "BLL_01014378": "R1-P1-21", "01014378": "R1-P1-21", "1014378": "R1-P1-21", "BLL_01014379": "R1-P1-22", "01014379": "R1-P1-22", "1014379": "R1-P1-22", "BLL_01014380": "R1-P1-23", "01014380": "R1-P1-23", "1014380": "R1-P1-23", "BLL_01014381": "R1-P1-24", "01014381": "R1-P1-24", "1014381": "R1-P1-24", "BLL_01014382": "R1-P1-25", "01014382": "R1-P1-25", "1014382": "R1-P1-25", "BLL_01014137": "R1-P2-01", "01014137": "R1-P2-01", "1014137": "R1-P2-01", "BLL_01014138": "R1-P2-02", "01014138": "R1-P2-02", "1014138": "R1-P2-02", "BLL_01014139": "R1-P2-03", "01014139": "R1-P2-03", "1014139": "R1-P2-03", "BLL_01014140": "R1-P2-04", "01014140": "R1-P2-04", "1014140": "R1-P2-04", "BLL_01014141": "R1-P2-05", "01014141": "R1-P2-05", "1014141": "R1-P2-05", "BLL_01014142": "R1-P2-06", "01014142": "R1-P2-06", "1014142": "R1-P2-06", "BLL_01014143": "R1-P2-07", "01014143": "R1-P2-07", "1014143": "R1-P2-07", "BLL_01014144": "R1-P2-08", "01014144": "R1-P2-08", "1014144": "R1-P2-08", "BLL_01014145": "R1-P2-09", "01014145": "R1-P2-09", "1014145": "R1-P2-09", "BLL_01014146": "R1-P2-10", "01014146": "R1-P2-10", "1014146": "R1-P2-10", "BLL_01014147": "R1-P2-11", "01014147": "R1-P2-11", "1014147": "R1-P2-11", "BLL_01014148": "R1-P2-12", "01014148": "R1-P2-12", "1014148": "R1-P2-12", "BLL_01014149": "R1-P2-13", "01014149": "R1-P2-13", "1014149": "R1-P2-13", "BLL_01014150": "R1-P2-14", "01014150": "R1-P2-14", "1014150": "R1-P2-14", "BLL_01014151": "R1-P2-15", "01014151": "R1-P2-15", "1014151": "R1-P2-15", "BLL_01014152": "R1-P2-16", "01014152": "R1-P2-16", "1014152": "R1-P2-16", "BLL_01014153": "R1-P2-17", "01014153": "R1-P2-17", "1014153": "R1-P2-17", "BLL_01014154": "R1-P2-18", "01014154": "R1-P2-18", "1014154": "R1-P2-18", "BLL_01014155": "R1-P2-19", "01014155": "R1-P2-19", "1014155": "R1-P2-19", "BLL_01014156": "R1-P2-20", "01014156": "R1-P2-20", "1014156": "R1-P2-20", "BLL_01014157": "R1-P2-21", "01014157": "R1-P2-21", "1014157": "R1-P2-21", "BLL_01014158": "R1-P2-22", "01014158": "R1-P2-22", "1014158": "R1-P2-22", "BLL_01014159": "R1-P2-23", "01014159": "R1-P2-23", "1014159": "R1-P2-23", "BLL_01014160": "R1-P2-24", "01014160": "R1-P2-24", "1014160": "R1-P2-24", "BLL_01014161": "R1-P2-25", "01014161": "R1-P2-25", "1014161": "R1-P2-25", "BLL_01011233": "R1-P3-01", "01011233": "R1-P3-01", "1011233": "R1-P3-01", "BLL_01014123": "R1-P3-02", "01014123": "R1-P3-02", "1014123": "R1-P3-02", "BLL_01014124": "R1-P3-03", "01014124": "R1-P3-03", "1014124": "R1-P3-03", "BLL_01014125": "R1-P3-04", "01014125": "R1-P3-04", "1014125": "R1-P3-04", "BLL_01014126": "R1-P3-05", "01014126": "R1-P3-05", "1014126": "R1-P3-05", "BLL_01013176": "R1-P3-06", "01013176": "R1-P3-06", "1013176": "R1-P3-06", "BLL_01014107": "R1-P3-07", "01014107": "R1-P3-07", "1014107": "R1-P3-07", "BLL_01014108": "R1-P3-08", "01014108": "R1-P3-08", "1014108": "R1-P3-08", "BLL_01014127": "R1-P3-09", "01014127": "R1-P3-09", "1014127": "R1-P3-09", "BLL_01014128": "R1-P3-10", "01014128": "R1-P3-10", "1014128": "R1-P3-10", "BLL_01014129": "R1-P3-11", "01014129": "R1-P3-11", "1014129": "R1-P3-11", "BLL_01014130": "R1-P3-12", "01014130": "R1-P3-12", "1014130": "R1-P3-12", "BLL_01014131": "R1-P3-13", "01014131": "R1-P3-13", "1014131": "R1-P3-13", "BLL_01014132": "R1-P3-14", "01014132": "R1-P3-14", "1014132": "R1-P3-14", "BLL_01014133": "R1-P3-15", "01014133": "R1-P3-15", "1014133": "R1-P3-15", "BLL_01014116": "R1-P3-16", "01014116": "R1-P3-16", "1014116": "R1-P3-16", "BLL_01013456": "R1-P3-17", "01013456": "R1-P3-17", "1013456": "R1-P3-17", "BLL_01013447": "R1-P3-18", "01013447": "R1-P3-18", "1013447": "R1-P3-18", "BLL_01013198": "R1-P3-19", "01013198": "R1-P3-19", "1013198": "R1-P3-19", "BLL_01013191": "R1-P3-20", "01013191": "R1-P3-20", "1013191": "R1-P3-20", "BLL_01013184": "R1-P3-21", "01013184": "R1-P3-21", "1013184": "R1-P3-21", "BLL_01013183": "R1-P3-22", "01013183": "R1-P3-22", "1013183": "R1-P3-22", "BLL_01013168": "R1-P3-23", "01013168": "R1-P3-23", "1013168": "R1-P3-23", "BLL_01013148": "R1-P3-24", "01013148": "R1-P3-24", "1013148": "R1-P3-24", "BLL_01013130": "R1-P3-25", "01013130": "R1-P3-25", "1013130": "R1-P3-25", "BLL_01011241": "R1-P4-01", "01011241": "R1-P4-01", "1011241": "R1-P4-01", "BLL_01011242": "R1-P4-02", "01011242": "R1-P4-02", "1011242": "R1-P4-02", "BLL_01011248": "R1-P4-03", "01011248": "R1-P4-03", "1011248": "R1-P4-03", "BLL_01011256": "R1-P4-04", "01011256": "R1-P4-04", "1011256": "R1-P4-04", "BLL_01011264": "R1-P4-05", "01011264": "R1-P4-05", "1011264": "R1-P4-05", "BLL_01011272": "R1-P4-06", "01011272": "R1-P4-06", "1011272": "R1-P4-06", "BLL_01011280": "R1-P4-07", "01011280": "R1-P4-07", "1011280": "R1-P4-07", "BLL_01011281": "R1-P4-08", "01011281": "R1-P4-08", "1011281": "R1-P4-08", "BLL_01011287": "R1-P4-09", "01011287": "R1-P4-09", "1011287": "R1-P4-09", "BLL_01011295": "R1-P4-10", "01011295": "R1-P4-10", "1011295": "R1-P4-10", "BLL_01011311": "R1-P4-11", "01011311": "R1-P4-11", "1011311": "R1-P4-11", "BLL_01011312": "R1-P4-12", "01011312": "R1-P4-12", "1011312": "R1-P4-12", "BLL_01011322": "R1-P4-13", "01011322": "R1-P4-13", "1011322": "R1-P4-13", "BLL_01011323": "R1-P4-14", "01011323": "R1-P4-14", "1011323": "R1-P4-14", "BLL_01011922": "R1-P4-15", "01011922": "R1-P4-15", "1011922": "R1-P4-15", "BLL_01012046": "R1-P4-16", "01012046": "R1-P4-16", "1012046": "R1-P4-16", "BLL_01012104": "R1-P4-17", "01012104": "R1-P4-17", "1012104": "R1-P4-17", "BLL_01012123": "R1-P4-18", "01012123": "R1-P4-18", "1012123": "R1-P4-18", "BLL_01012135": "R1-P4-19", "01012135": "R1-P4-19", "1012135": "R1-P4-19", "BLL_01012185": "R1-P4-20", "01012185": "R1-P4-20", "1012185": "R1-P4-20", "BLL_01012193": "R1-P4-21", "01012193": "R1-P4-21", "1012193": "R1-P4-21", "BLL_01012850": "R1-P4-22", "01012850": "R1-P4-22", "1012850": "R1-P4-22", "BLL_01012860": "R1-P4-23", "01012860": "R1-P4-23", "1012860": "R1-P4-23", "BLL_01012869": "R1-P4-24", "01012869": "R1-P4-24", "1012869": "R1-P4-24", "BLL_01012891": "R1-P4-25", "01012891": "R1-P4-25", "1012891": "R1-P4-25", "BLL_01012912": "R1-P4-26", "01012912": "R1-P4-26", "1012912": "R1-P4-26", "BLL_01014200": "R1-P5-01", "01014200": "R1-P5-01", "1014200": "R1-P5-01", "BLL_01014201": "R1-P5-02", "01014201": "R1-P5-02", "1014201": "R1-P5-02", "BLL_01014202": "R1-P5-03", "01014202": "R1-P5-03", "1014202": "R1-P5-03", "BLL_01014203": "R1-P5-04", "01014203": "R1-P5-04", "1014203": "R1-P5-04", "BLL_01014204": "R1-P5-05", "01014204": "R1-P5-05", "1014204": "R1-P5-05", "BLL_01014205": "R1-P5-06", "01014205": "R1-P5-06", "1014205": "R1-P5-06", "BLL_01014206": "R1-P5-07", "01014206": "R1-P5-07", "1014206": "R1-P5-07", "BLL_01014207": "R1-P5-08", "01014207": "R1-P5-08", "1014207": "R1-P5-08", "BLL_01014208": "R1-P5-09", "01014208": "R1-P5-09", "1014208": "R1-P5-09", "BLL_01014209": "R1-P5-10", "01014209": "R1-P5-10", "1014209": "R1-P5-10", "BLL_01014210": "R1-P5-11", "01014210": "R1-P5-11", "1014210": "R1-P5-11", "BLL_01014211": "R1-P5-12", "01014211": "R1-P5-12", "1014211": "R1-P5-12", "BLL_01014212": "R1-P5-13", "01014212": "R1-P5-13", "1014212": "R1-P5-13", "BLL_01014213": "R1-P5-14", "01014213": "R1-P5-14", "1014213": "R1-P5-14", "BLL_01014214": "R1-P5-15", "01014214": "R1-P5-15", "1014214": "R1-P5-15", "BLL_01014215": "R1-P5-16", "01014215": "R1-P5-16", "1014215": "R1-P5-16", "BLL_01014216": "R1-P5-17", "01014216": "R1-P5-17", "1014216": "R1-P5-17", "BLL_01014217": "R1-P5-18", "01014217": "R1-P5-18", "1014217": "R1-P5-18", "BLL_01014218": "R1-P5-19", "01014218": "R1-P5-19", "1014218": "R1-P5-19", "BLL_01014219": "R1-P5-20", "01014219": "R1-P5-20", "1014219": "R1-P5-20", "BLL_01014220": "R1-P5-21", "01014220": "R1-P5-21", "1014220": "R1-P5-21", "BLL_01014221": "R1-P5-22", "01014221": "R1-P5-22", "1014221": "R1-P5-22", "BLL_01014222": "R1-P5-23", "01014222": "R1-P5-23", "1014222": "R1-P5-23", "BLL_01014223": "R1-P5-24", "01014223": "R1-P5-24", "1014223": "R1-P5-24", "BLL_01014224": "R1-P5-25", "01014224": "R1-P5-25", "1014224": "R1-P5-25", "BLL_01017911": "R2-P1-01", "01017911": "R2-P1-01", "1017911": "R2-P1-01", "BLL_01017912": "R2-P1-02", "01017912": "R2-P1-02", "1017912": "R2-P1-02", "BLL_01017913": "R2-P1-03", "01017913": "R2-P1-03", "1017913": "R2-P1-03", "BLL_01017914": "R2-P1-04", "01017914": "R2-P1-04", "1017914": "R2-P1-04", "BLL_01017915": "R2-P1-05", "01017915": "R2-P1-05", "1017915": "R2-P1-05", "BLL_01017916": "R2-P1-06", "01017916": "R2-P1-06", "1017916": "R2-P1-06", "BLL_01017917": "R2-P1-07", "01017917": "R2-P1-07", "1017917": "R2-P1-07", "BLL_01017918": "R2-P1-08", "01017918": "R2-P1-08", "1017918": "R2-P1-08", "BLL_01017919": "R2-P1-09", "01017919": "R2-P1-09", "1017919": "R2-P1-09", "BLL_01017920": "R2-P1-10", "01017920": "R2-P1-10", "1017920": "R2-P1-10", "BLL_01017921": "R2-P1-11", "01017921": "R2-P1-11", "1017921": "R2-P1-11", "BLL_01017922": "R2-P1-12", "01017922": "R2-P1-12", "1017922": "R2-P1-12", "BLL_01017923": "R2-P1-13", "01017923": "R2-P1-13", "1017923": "R2-P1-13", "BLL_01017924": "R2-P1-14", "01017924": "R2-P1-14", "1017924": "R2-P1-14", "BLL_01017925": "R2-P1-15", "01017925": "R2-P1-15", "1017925": "R2-P1-15", "BLL_01017926": "R2-P1-16", "01017926": "R2-P1-16", "1017926": "R2-P1-16", "BLL_01017927": "R2-P1-17", "01017927": "R2-P1-17", "1017927": "R2-P1-17", "BLL_01017928": "R2-P1-18", "01017928": "R2-P1-18", "1017928": "R2-P1-18", "BLL_01017929": "R2-P1-19", "01017929": "R2-P1-19", "1017929": "R2-P1-19", "BLL_01017930": "R2-P1-20", "01017930": "R2-P1-20", "1017930": "R2-P1-20", "BLL_01017931": "R2-P1-21", "01017931": "R2-P1-21", "1017931": "R2-P1-21", "BLL_01017932": "R2-P1-22", "01017932": "R2-P1-22", "1017932": "R2-P1-22", "BLL_01017933": "R2-P1-23", "01017933": "R2-P1-23", "1017933": "R2-P1-23", "BLL_01017934": "R2-P1-24", "01017934": "R2-P1-24", "1017934": "R2-P1-24", "BLL_01017935": "R2-P1-25", "01017935": "R2-P1-25", "1017935": "R2-P1-25", "BLL_01017938": "R2-P2-01", "01017938": "R2-P2-01", "1017938": "R2-P2-01", "BLL_01017939": "R2-P2-02", "01017939": "R2-P2-02", "1017939": "R2-P2-02", "BLL_01017940": "R2-P2-03", "01017940": "R2-P2-03", "1017940": "R2-P2-03", "BLL_01017941": "R2-P2-04", "01017941": "R2-P2-04", "1017941": "R2-P2-04", "BLL_01017942": "R2-P2-05", "01017942": "R2-P2-05", "1017942": "R2-P2-05", "BLL_01017943": "R2-P2-06", "01017943": "R2-P2-06", "1017943": "R2-P2-06", "BLL_01017944": "R2-P2-07", "01017944": "R2-P2-07", "1017944": "R2-P2-07", "BLL_01017945": "R2-P2-08", "01017945": "R2-P2-08", "1017945": "R2-P2-08", "BLL_01017946": "R2-P2-09", "01017946": "R2-P2-09", "1017946": "R2-P2-09", "BLL_01017947": "R2-P2-10", "01017947": "R2-P2-10", "1017947": "R2-P2-10", "BLL_01017948": "R2-P2-11", "01017948": "R2-P2-11", "1017948": "R2-P2-11", "BLL_01017949": "R2-P2-12", "01017949": "R2-P2-12", "1017949": "R2-P2-12", "BLL_01017950": "R2-P2-13", "01017950": "R2-P2-13", "1017950": "R2-P2-13", "BLL_01017951": "R2-P2-14", "01017951": "R2-P2-14", "1017951": "R2-P2-14", "BLL_01017952": "R2-P2-15", "01017952": "R2-P2-15", "1017952": "R2-P2-15", "BLL_01017953": "R2-P2-16", "01017953": "R2-P2-16", "1017953": "R2-P2-16", "BLL_01017954": "R2-P2-17", "01017954": "R2-P2-17", "1017954": "R2-P2-17", "BLL_01017955": "R2-P2-18", "01017955": "R2-P2-18", "1017955": "R2-P2-18", "BLL_01017956": "R2-P2-19", "01017956": "R2-P2-19", "1017956": "R2-P2-19", "BLL_01017957": "R2-P2-20", "01017957": "R2-P2-20", "1017957": "R2-P2-20", "BLL_01017958": "R2-P2-21", "01017958": "R2-P2-21", "1017958": "R2-P2-21", "BLL_01017959": "R2-P2-22", "01017959": "R2-P2-22", "1017959": "R2-P2-22", "BLL_01017960": "R2-P2-23", "01017960": "R2-P2-23", "1017960": "R2-P2-23", "BLL_01017961": "R2-P2-24", "01017961": "R2-P2-24", "1017961": "R2-P2-24", "BLL_01017962": "R2-P2-25", "01017962": "R2-P2-25", "1017962": "R2-P2-25", "BLL_01017963": "R2-P3-01", "01017963": "R2-P3-01", "1017963": "R2-P3-01", "BLL_01017964": "R2-P3-02", "01017964": "R2-P3-02", "1017964": "R2-P3-02", "BLL_01017965": "R2-P3-03", "01017965": "R2-P3-03", "1017965": "R2-P3-03", "BLL_01017966": "R2-P3-04", "01017966": "R2-P3-04", "1017966": "R2-P3-04", "BLL_01017967": "R2-P3-05", "01017967": "R2-P3-05", "1017967": "R2-P3-05", "BLL_01017968": "R2-P3-06", "01017968": "R2-P3-06", "1017968": "R2-P3-06", "BLL_01017969": "R2-P3-07", "01017969": "R2-P3-07", "1017969": "R2-P3-07", "BLL_01017970": "R2-P3-08", "01017970": "R2-P3-08", "1017970": "R2-P3-08", "BLL_01017971": "R2-P3-09", "01017971": "R2-P3-09", "1017971": "R2-P3-09", "BLL_01017972": "R2-P3-10", "01017972": "R2-P3-10", "1017972": "R2-P3-10", "BLL_01017973": "R2-P3-11", "01017973": "R2-P3-11", "1017973": "R2-P3-11", "BLL_01017974": "R2-P3-12", "01017974": "R2-P3-12", "1017974": "R2-P3-12", "BLL_01017975": "R2-P3-13", "01017975": "R2-P3-13", "1017975": "R2-P3-13", "BLL_01017976": "R2-P3-14", "01017976": "R2-P3-14", "1017976": "R2-P3-14", "BLL_01017977": "R2-P3-15", "01017977": "R2-P3-15", "1017977": "R2-P3-15", "BLL_01017978": "R2-P3-16", "01017978": "R2-P3-16", "1017978": "R2-P3-16", "BLL_01017979": "R2-P3-17", "01017979": "R2-P3-17", "1017979": "R2-P3-17", "BLL_01017980": "R2-P3-18", "01017980": "R2-P3-18", "1017980": "R2-P3-18", "BLL_01017981": "R2-P3-19", "01017981": "R2-P3-19", "1017981": "R2-P3-19", "BLL_01017982": "R2-P3-20", "01017982": "R2-P3-20", "1017982": "R2-P3-20", "BLL_01017983": "R2-P3-21", "01017983": "R2-P3-21", "1017983": "R2-P3-21", "BLL_01017984": "R2-P3-22", "01017984": "R2-P3-22", "1017984": "R2-P3-22", "BLL_01017985": "R2-P3-23", "01017985": "R2-P3-23", "1017985": "R2-P3-23", "BLL_01017986": "R2-P3-24", "01017986": "R2-P3-24", "1017986": "R2-P3-24", "BLL_01017987": "R2-P3-25", "01017987": "R2-P3-25", "1017987": "R2-P3-25", "BLL_01018526": "R2-P4-01", "01018526": "R2-P4-01", "1018526": "R2-P4-01", "BLL_01018539": "R2-P4-02", "01018539": "R2-P4-02", "1018539": "R2-P4-02", "BLL_01018540": "R2-P4-03", "01018540": "R2-P4-03", "1018540": "R2-P4-03", "BLL_01018541": "R2-P4-04", "01018541": "R2-P4-04", "1018541": "R2-P4-04", "BLL_01018542": "R2-P4-05", "01018542": "R2-P4-05", "1018542": "R2-P4-05", "BLL_01018543": "R2-P4-06", "01018543": "R2-P4-06", "1018543": "R2-P4-06", "BLL_01018544": "R2-P4-07", "01018544": "R2-P4-07", "1018544": "R2-P4-07", "BLL_01018545": "R2-P4-08", "01018545": "R2-P4-08", "1018545": "R2-P4-08", "BLL_01018546": "R2-P4-09", "01018546": "R2-P4-09", "1018546": "R2-P4-09", "BLL_01018547": "R2-P4-10", "01018547": "R2-P4-10", "1018547": "R2-P4-10", "BLL_01018548": "R2-P4-11", "01018548": "R2-P4-11", "1018548": "R2-P4-11", "BLL_01018549": "R2-P4-12", "01018549": "R2-P4-12", "1018549": "R2-P4-12", "BLL_01018550": "R2-P4-13", "01018550": "R2-P4-13", "1018550": "R2-P4-13", "BLL_01018551": "R2-P4-14", "01018551": "R2-P4-14", "1018551": "R2-P4-14", "BLL_01018552": "R2-P4-15", "01018552": "R2-P4-15", "1018552": "R2-P4-15", "BLL_01018553": "R2-P4-16", "01018553": "R2-P4-16", "1018553": "R2-P4-16", "BLL_01018554": "R2-P4-17", "01018554": "R2-P4-17", "1018554": "R2-P4-17", "BLL_01018555": "R2-P4-18", "01018555": "R2-P4-18", "1018555": "R2-P4-18", "BLL_01018556": "R2-P4-19", "01018556": "R2-P4-19", "1018556": "R2-P4-19", "BLL_01018557": "R2-P4-20", "01018557": "R2-P4-20", "1018557": "R2-P4-20", "BLL_01018558": "R2-P4-21", "01018558": "R2-P4-21", "1018558": "R2-P4-21", "BLL_01018559": "R2-P4-22", "01018559": "R2-P4-22", "1018559": "R2-P4-22", "BLL_01018560": "R2-P4-23", "01018560": "R2-P4-23", "1018560": "R2-P4-23", "BLL_01018561": "R2-P4-24", "01018561": "R2-P4-24", "1018561": "R2-P4-24", "BLL_01018562": "R2-P4-25", "01018562": "R2-P4-25", "1018562": "R2-P4-25", "BLL_01030561": "R2-P5-01", "01030561": "R2-P5-01", "1030561": "R2-P5-01", "BLL_01030562": "R2-P5-02", "01030562": "R2-P5-02", "1030562": "R2-P5-02", "BLL_01030563": "R2-P5-03", "01030563": "R2-P5-03", "1030563": "R2-P5-03", "BLL_01030564": "R2-P5-04", "01030564": "R2-P5-04", "1030564": "R2-P5-04", "BLL_01030565": "R2-P5-05", "01030565": "R2-P5-05", "1030565": "R2-P5-05", "BLL_01030566": "R2-P5-06", "01030566": "R2-P5-06", "1030566": "R2-P5-06", "BLL_01030567": "R2-P5-07", "01030567": "R2-P5-07", "1030567": "R2-P5-07", "BLL_01030568": "R2-P5-08", "01030568": "R2-P5-08", "1030568": "R2-P5-08", "BLL_01030569": "R2-P5-09", "01030569": "R2-P5-09", "1030569": "R2-P5-09", "BLL_01030570": "R2-P5-10", "01030570": "R2-P5-10", "1030570": "R2-P5-10", "BLL_01025826": "R2-P5-11", "01025826": "R2-P5-11", "1025826": "R2-P5-11", "BLL_01030571": "R2-P5-12", "01030571": "R2-P5-12", "1030571": "R2-P5-12", "BLL_01030572": "R2-P5-13", "01030572": "R2-P5-13", "1030572": "R2-P5-13", "BLL_01030573": "R2-P5-14", "01030573": "R2-P5-14", "1030573": "R2-P5-14", "BLL_01030574": "R2-P5-15", "01030574": "R2-P5-15", "1030574": "R2-P5-15", "BLL_01025828": "R2-P5-16", "01025828": "R2-P5-16", "1025828": "R2-P5-16", "BLL_01030575": "R2-P5-17", "01030575": "R2-P5-17", "1030575": "R2-P5-17", "BLL_01030576": "R2-P5-18", "01030576": "R2-P5-18", "1030576": "R2-P5-18", "BLL_01030577": "R2-P5-19", "01030577": "R2-P5-19", "1030577": "R2-P5-19", "BLL_01030578": "R2-P5-20", "01030578": "R2-P5-20", "1030578": "R2-P5-20", "BLL_01025827": "R2-P5-21", "01025827": "R2-P5-21", "1025827": "R2-P5-21", "BLL_01030579": "R2-P5-22", "01030579": "R2-P5-22", "1030579": "R2-P5-22", "BLL_01030580": "R2-P5-23", "01030580": "R2-P5-23", "1030580": "R2-P5-23", "BLL_01030581": "R2-P5-24", "01030581": "R2-P5-24", "1030581": "R2-P5-24", "BLL_01030582": "R2-P5-25", "01030582": "R2-P5-25", "1030582": "R2-P5-25", "BLL_01030584": "R3-P1-01", "01030584": "R3-P1-01", "1030584": "R3-P1-01", "BLL_01030585": "R3-P1-02", "01030585": "R3-P1-02", "1030585": "R3-P1-02", "BLL_01030586": "R3-P1-03", "01030586": "R3-P1-03", "1030586": "R3-P1-03", "BLL_01030587": "R3-P1-04", "01030587": "R3-P1-04", "1030587": "R3-P1-04", "BLL_01030588": "R3-P1-05", "01030588": "R3-P1-05", "1030588": "R3-P1-05", "BLL_01030589": "R3-P1-06", "01030589": "R3-P1-06", "1030589": "R3-P1-06", "BLL_01030590": "R3-P1-07", "01030590": "R3-P1-07", "1030590": "R3-P1-07", "BLL_01030591": "R3-P1-08", "01030591": "R3-P1-08", "1030591": "R3-P1-08", "BLL_01030592": "R3-P1-09", "01030592": "R3-P1-09", "1030592": "R3-P1-09", "BLL_01030593": "R3-P1-10", "01030593": "R3-P1-10", "1030593": "R3-P1-10", "BLL_01030594": "R3-P1-11", "01030594": "R3-P1-11", "1030594": "R3-P1-11", "BLL_01030595": "R3-P1-12", "01030595": "R3-P1-12", "1030595": "R3-P1-12", "BLL_01030596": "R3-P1-13", "01030596": "R3-P1-13", "1030596": "R3-P1-13", "BLL_01030597": "R3-P1-14", "01030597": "R3-P1-14", "1030597": "R3-P1-14", "BLL_01030598": "R3-P1-15", "01030598": "R3-P1-15", "1030598": "R3-P1-15", "BLL_01030599": "R3-P1-16", "01030599": "R3-P1-16", "1030599": "R3-P1-16", "BLL_01030600": "R3-P1-17", "01030600": "R3-P1-17", "1030600": "R3-P1-17", "BLL_01030601": "R3-P1-18", "01030601": "R3-P1-18", "1030601": "R3-P1-18", "BLL_01030602": "R3-P1-19", "01030602": "R3-P1-19", "1030602": "R3-P1-19", "BLL_01030603": "R3-P1-20", "01030603": "R3-P1-20", "1030603": "R3-P1-20", "BLL_01030604": "R3-P1-21", "01030604": "R3-P1-21", "1030604": "R3-P1-21", "BLL_01030605": "R3-P1-22", "01030605": "R3-P1-22", "1030605": "R3-P1-22", "BLL_01030606": "R3-P1-23", "01030606": "R3-P1-23", "1030606": "R3-P1-23", "BLL_01030607": "R3-P1-24", "01030607": "R3-P1-24", "1030607": "R3-P1-24", "BLL_01030608": "R3-P1-25", "01030608": "R3-P1-25", "1030608": "R3-P1-25", "BLL_01030611": "R3-P2-01", "01030611": "R3-P2-01", "1030611": "R3-P2-01", "BLL_01030612": "R3-P2-02", "01030612": "R3-P2-02", "1030612": "R3-P2-02", "BLL_01030613": "R3-P2-03", "01030613": "R3-P2-03", "1030613": "R3-P2-03", "BLL_01030614": "R3-P2-04", "01030614": "R3-P2-04", "1030614": "R3-P2-04", "BLL_01030615": "R3-P2-05", "01030615": "R3-P2-05", "1030615": "R3-P2-05", "BLL_01030616": "R3-P2-06", "01030616": "R3-P2-06", "1030616": "R3-P2-06", "BLL_01030617": "R3-P2-07", "01030617": "R3-P2-07", "1030617": "R3-P2-07", "BLL_01030618": "R3-P2-08", "01030618": "R3-P2-08", "1030618": "R3-P2-08", "BLL_01030619": "R3-P2-09", "01030619": "R3-P2-09", "1030619": "R3-P2-09", "BLL_01030620": "R3-P2-10", "01030620": "R3-P2-10", "1030620": "R3-P2-10", "BLL_01030621": "R3-P2-11", "01030621": "R3-P2-11", "1030621": "R3-P2-11", "BLL_01030622": "R3-P2-12", "01030622": "R3-P2-12", "1030622": "R3-P2-12", "BLL_01030623": "R3-P2-13", "01030623": "R3-P2-13", "1030623": "R3-P2-13", "BLL_01030624": "R3-P2-14", "01030624": "R3-P2-14", "1030624": "R3-P2-14", "BLL_01030625": "R3-P2-15", "01030625": "R3-P2-15", "1030625": "R3-P2-15", "BLL_01030626": "R3-P2-16", "01030626": "R3-P2-16", "1030626": "R3-P2-16", "BLL_01030627": "R3-P2-17", "01030627": "R3-P2-17", "1030627": "R3-P2-17", "BLL_01030628": "R3-P2-18", "01030628": "R3-P2-18", "1030628": "R3-P2-18", "BLL_01030629": "R3-P2-19", "01030629": "R3-P2-19", "1030629": "R3-P2-19", "BLL_01030630": "R3-P2-20", "01030630": "R3-P2-20", "1030630": "R3-P2-20", "BLL_01030631": "R3-P2-21", "01030631": "R3-P2-21", "1030631": "R3-P2-21", "BLL_01030632": "R3-P2-22", "01030632": "R3-P2-22", "1030632": "R3-P2-22", "BLL_01030633": "R3-P2-23", "01030633": "R3-P2-23", "1030633": "R3-P2-23", "BLL_01030634": "R3-P2-24", "01030634": "R3-P2-24", "1030634": "R3-P2-24", "BLL_01030635": "R3-P2-25", "01030635": "R3-P2-25", "1030635": "R3-P2-25", "BLL_01030636": "R3-P3-01", "01030636": "R3-P3-01", "1030636": "R3-P3-01", "BLL_01030637": "R3-P3-02", "01030637": "R3-P3-02", "1030637": "R3-P3-02", "BLL_01030638": "R3-P3-03", "01030638": "R3-P3-03", "1030638": "R3-P3-03", "BLL_01030639": "R3-P3-04", "01030639": "R3-P3-04", "1030639": "R3-P3-04", "BLL_01030640": "R3-P3-05", "01030640": "R3-P3-05", "1030640": "R3-P3-05", "BLL_01030641": "R3-P3-06", "01030641": "R3-P3-06", "1030641": "R3-P3-06", "BLL_01030642": "R3-P3-07", "01030642": "R3-P3-07", "1030642": "R3-P3-07", "BLL_01030643": "R3-P3-08", "01030643": "R3-P3-08", "1030643": "R3-P3-08", "BLL_01030644": "R3-P3-09", "01030644": "R3-P3-09", "1030644": "R3-P3-09", "BLL_01030645": "R3-P3-10", "01030645": "R3-P3-10", "1030645": "R3-P3-10", "BLL_01030646": "R3-P3-11", "01030646": "R3-P3-11", "1030646": "R3-P3-11", "BLL_01030647": "R3-P3-12", "01030647": "R3-P3-12", "1030647": "R3-P3-12", "BLL_01030648": "R3-P3-13", "01030648": "R3-P3-13", "1030648": "R3-P3-13", "BLL_01030649": "R3-P3-14", "01030649": "R3-P3-14", "1030649": "R3-P3-14", "BLL_01030650": "R3-P3-15", "01030650": "R3-P3-15", "1030650": "R3-P3-15", "BLL_01030651": "R3-P3-16", "01030651": "R3-P3-16", "1030651": "R3-P3-16", "BLL_01030652": "R3-P3-17", "01030652": "R3-P3-17", "1030652": "R3-P3-17", "BLL_01030653": "R3-P3-18", "01030653": "R3-P3-18", "1030653": "R3-P3-18", "BLL_01030654": "R3-P3-19", "01030654": "R3-P3-19", "1030654": "R3-P3-19", "BLL_01030655": "R3-P3-20", "01030655": "R3-P3-20", "1030655": "R3-P3-20", "BLL_01030656": "R3-P3-21", "01030656": "R3-P3-21", "1030656": "R3-P3-21", "BLL_01030657": "R3-P3-22", "01030657": "R3-P3-22", "1030657": "R3-P3-22", "BLL_01030658": "R3-P3-23", "01030658": "R3-P3-23", "1030658": "R3-P3-23", "BLL_01030659": "R3-P3-24", "01030659": "R3-P3-24", "1030659": "R3-P3-24", "BLL_01030660": "R3-P3-25", "01030660": "R3-P3-25", "1030660": "R3-P3-25", "BLL_01030663": "R3-P4-01", "01030663": "R3-P4-01", "1030663": "R3-P4-01", "BLL_01030664": "R3-P4-02", "01030664": "R3-P4-02", "1030664": "R3-P4-02", "BLL_01030665": "R3-P4-03", "01030665": "R3-P4-03", "1030665": "R3-P4-03", "BLL_01030666": "R3-P4-04", "01030666": "R3-P4-04", "1030666": "R3-P4-04", "BLL_01030667": "R3-P4-05", "01030667": "R3-P4-05", "1030667": "R3-P4-05", "BLL_01030668": "R3-P4-06", "01030668": "R3-P4-06", "1030668": "R3-P4-06", "BLL_01030669": "R3-P4-07", "01030669": "R3-P4-07", "1030669": "R3-P4-07", "BLL_01030670": "R3-P4-08", "01030670": "R3-P4-08", "1030670": "R3-P4-08", "BLL_01030671": "R3-P4-09", "01030671": "R3-P4-09", "1030671": "R3-P4-09", "BLL_01030672": "R3-P4-10", "01030672": "R3-P4-10", "1030672": "R3-P4-10", "BLL_01030673": "R3-P4-11", "01030673": "R3-P4-11", "1030673": "R3-P4-11", "BLL_01030674": "R3-P4-12", "01030674": "R3-P4-12", "1030674": "R3-P4-12", "BLL_01030675": "R3-P4-13", "01030675": "R3-P4-13", "1030675": "R3-P4-13", "BLL_01030676": "R3-P4-14", "01030676": "R3-P4-14", "1030676": "R3-P4-14", "BLL_01030677": "R3-P4-15", "01030677": "R3-P4-15", "1030677": "R3-P4-15", "BLL_01030678": "R3-P4-16", "01030678": "R3-P4-16", "1030678": "R3-P4-16", "BLL_01030679": "R3-P4-17", "01030679": "R3-P4-17", "1030679": "R3-P4-17", "BLL_01030680": "R3-P4-18", "01030680": "R3-P4-18", "1030680": "R3-P4-18", "BLL_01030681": "R3-P4-19", "01030681": "R3-P4-19", "1030681": "R3-P4-19", "BLL_01030682": "R3-P4-20", "01030682": "R3-P4-20", "1030682": "R3-P4-20", "BLL_01030683": "R3-P4-21", "01030683": "R3-P4-21", "1030683": "R3-P4-21", "BLL_01030684": "R3-P4-22", "01030684": "R3-P4-22", "1030684": "R3-P4-22", "BLL_01030685": "R3-P4-23", "01030685": "R3-P4-23", "1030685": "R3-P4-23", "BLL_01030686": "R3-P4-24", "01030686": "R3-P4-24", "1030686": "R3-P4-24", "BLL_01030687": "R3-P4-25", "01030687": "R3-P4-25", "1030687": "R3-P4-25", "BLL_01030689": "R3-P5-01", "01030689": "R3-P5-01", "1030689": "R3-P5-01", "BLL_01030690": "R3-P5-02", "01030690": "R3-P5-02", "1030690": "R3-P5-02", "BLL_01030691": "R3-P5-03", "01030691": "R3-P5-03", "1030691": "R3-P5-03", "BLL_01030692": "R3-P5-04", "01030692": "R3-P5-04", "1030692": "R3-P5-04", "BLL_01030693": "R3-P5-05", "01030693": "R3-P5-05", "1030693": "R3-P5-05", "BLL_01030694": "R3-P5-06", "01030694": "R3-P5-06", "1030694": "R3-P5-06", "BLL_01030695": "R3-P5-07", "01030695": "R3-P5-07", "1030695": "R3-P5-07", "BLL_01030696": "R3-P5-08", "01030696": "R3-P5-08", "1030696": "R3-P5-08", "BLL_01030697": "R3-P5-09", "01030697": "R3-P5-09", "1030697": "R3-P5-09", "BLL_01030698": "R3-P5-10", "01030698": "R3-P5-10", "1030698": "R3-P5-10", "BLL_01030699": "R3-P5-11", "01030699": "R3-P5-11", "1030699": "R3-P5-11", "BLL_01030700": "R3-P5-12", "01030700": "R3-P5-12", "1030700": "R3-P5-12", "BLL_01030701": "R3-P5-13", "01030701": "R3-P5-13", "1030701": "R3-P5-13", "BLL_01030702": "R3-P5-14", "01030702": "R3-P5-14", "1030702": "R3-P5-14", "BLL_01030703": "R3-P5-15", "01030703": "R3-P5-15", "1030703": "R3-P5-15", "BLL_01030704": "R3-P5-16", "01030704": "R3-P5-16", "1030704": "R3-P5-16", "BLL_01030705": "R3-P5-17", "01030705": "R3-P5-17", "1030705": "R3-P5-17", "BLL_01030706": "R3-P5-18", "01030706": "R3-P5-18", "1030706": "R3-P5-18", "BLL_01030707": "R3-P5-19", "01030707": "R3-P5-19", "1030707": "R3-P5-19", "BLL_01030708": "R3-P5-20", "01030708": "R3-P5-20", "1030708": "R3-P5-20", "BLL_01030709": "R3-P5-21", "01030709": "R3-P5-21", "1030709": "R3-P5-21", "BLL_01030710": "R3-P5-22", "01030710": "R3-P5-22", "1030710": "R3-P5-22", "BLL_01030711": "R3-P5-23", "01030711": "R3-P5-23", "1030711": "R3-P5-23", "BLL_01030712": "R3-P5-24", "01030712": "R3-P5-24", "1030712": "R3-P5-24", "BLL_01030713": "R3-P5-25", "01030713": "R3-P5-25", "1030713": "R3-P5-25", "BLL_01054091": "R4-P1-01", "01054091": "R4-P1-01", "1054091": "R4-P1-01", "BLL_01054092": "R4-P1-02", "01054092": "R4-P1-02", "1054092": "R4-P1-02", "BLL_01054093": "R4-P1-03", "01054093": "R4-P1-03", "1054093": "R4-P1-03", "BLL_01054094": "R4-P1-04", "01054094": "R4-P1-04", "1054094": "R4-P1-04", "BLL_01054095": "R4-P1-05", "01054095": "R4-P1-05", "1054095": "R4-P1-05", "BLL_01054096": "R4-P1-06", "01054096": "R4-P1-06", "1054096": "R4-P1-06", "BLL_01054097": "R4-P1-07", "01054097": "R4-P1-07", "1054097": "R4-P1-07", "BLL_01054098": "R4-P1-08", "01054098": "R4-P1-08", "1054098": "R4-P1-08", "BLL_01054099": "R4-P1-09", "01054099": "R4-P1-09", "1054099": "R4-P1-09", "BLL_01054100": "R4-P1-10", "01054100": "R4-P1-10", "1054100": "R4-P1-10", "BLL_01054101": "R4-P1-11", "01054101": "R4-P1-11", "1054101": "R4-P1-11", "BLL_01054102": "R4-P1-12", "01054102": "R4-P1-12", "1054102": "R4-P1-12", "BLL_01054103": "R4-P1-13", "01054103": "R4-P1-13", "1054103": "R4-P1-13", "BLL_01054104": "R4-P1-14", "01054104": "R4-P1-14", "1054104": "R4-P1-14", "BLL_01054105": "R4-P1-15", "01054105": "R4-P1-15", "1054105": "R4-P1-15", "BLL_01054106": "R4-P1-16", "01054106": "R4-P1-16", "1054106": "R4-P1-16", "BLL_01054107": "R4-P1-17", "01054107": "R4-P1-17", "1054107": "R4-P1-17", "BLL_01054108": "R4-P1-18", "01054108": "R4-P1-18", "1054108": "R4-P1-18", "BLL_01054109": "R4-P1-19", "01054109": "R4-P1-19", "1054109": "R4-P1-19", "BLL_01054110": "R4-P1-20", "01054110": "R4-P1-20", "1054110": "R4-P1-20", "BLL_01054111": "R4-P1-21", "01054111": "R4-P1-21", "1054111": "R4-P1-21", "BLL_01054112": "R4-P1-22", "01054112": "R4-P1-22", "1054112": "R4-P1-22", "BLL_01054113": "R4-P1-23", "01054113": "R4-P1-23", "1054113": "R4-P1-23", "BLL_01054114": "R4-P1-24", "01054114": "R4-P1-24", "1054114": "R4-P1-24", "BLL_01054115": "R4-P1-25", "01054115": "R4-P1-25", "1054115": "R4-P1-25", "BLL_01054116": "R4-P2-01", "01054116": "R4-P2-01", "1054116": "R4-P2-01", "BLL_01054117": "R4-P2-02", "01054117": "R4-P2-02", "1054117": "R4-P2-02", "BLL_01054118": "R4-P2-03", "01054118": "R4-P2-03", "1054118": "R4-P2-03", "BLL_01054119": "R4-P2-04", "01054119": "R4-P2-04", "1054119": "R4-P2-04", "BLL_01054120": "R4-P2-05", "01054120": "R4-P2-05", "1054120": "R4-P2-05", "BLL_01054121": "R4-P2-06", "01054121": "R4-P2-06", "1054121": "R4-P2-06", "BLL_01054122": "R4-P2-07", "01054122": "R4-P2-07", "1054122": "R4-P2-07", "BLL_01054123": "R4-P2-08", "01054123": "R4-P2-08", "1054123": "R4-P2-08", "BLL_01054124": "R4-P2-09", "01054124": "R4-P2-09", "1054124": "R4-P2-09", "BLL_01054125": "R4-P2-10", "01054125": "R4-P2-10", "1054125": "R4-P2-10", "BLL_01054126": "R4-P2-11", "01054126": "R4-P2-11", "1054126": "R4-P2-11", "BLL_01054127": "R4-P2-12", "01054127": "R4-P2-12", "1054127": "R4-P2-12", "BLL_01054128": "R4-P2-13", "01054128": "R4-P2-13", "1054128": "R4-P2-13", "BLL_01054129": "R4-P2-14", "01054129": "R4-P2-14", "1054129": "R4-P2-14", "BLL_01054130": "R4-P2-15", "01054130": "R4-P2-15", "1054130": "R4-P2-15", "BLL_01054131": "R4-P2-16", "01054131": "R4-P2-16", "1054131": "R4-P2-16", "BLL_01054132": "R4-P2-17", "01054132": "R4-P2-17", "1054132": "R4-P2-17", "BLL_01054133": "R4-P2-18", "01054133": "R4-P2-18", "1054133": "R4-P2-18", "BLL_01054134": "R4-P2-19", "01054134": "R4-P2-19", "1054134": "R4-P2-19", "BLL_01054135": "R4-P2-20", "01054135": "R4-P2-20", "1054135": "R4-P2-20", "BLL_01054136": "R4-P2-21", "01054136": "R4-P2-21", "1054136": "R4-P2-21", "BLL_01054137": "R4-P2-22", "01054137": "R4-P2-22", "1054137": "R4-P2-22", "BLL_01054138": "R4-P2-23", "01054138": "R4-P2-23", "1054138": "R4-P2-23", "BLL_01054139": "R4-P2-24", "01054139": "R4-P2-24", "1054139": "R4-P2-24", "BLL_01054140": "R4-P2-25", "01054140": "R4-P2-25", "1054140": "R4-P2-25", "BLL_01054141": "R4-P3-01", "01054141": "R4-P3-01", "1054141": "R4-P3-01", "BLL_01054142": "R4-P3-02", "01054142": "R4-P3-02", "1054142": "R4-P3-02", "BLL_01054143": "R4-P3-03", "01054143": "R4-P3-03", "1054143": "R4-P3-03", "BLL_01054144": "R4-P3-04", "01054144": "R4-P3-04", "1054144": "R4-P3-04", "BLL_01054145": "R4-P3-05", "01054145": "R4-P3-05", "1054145": "R4-P3-05", "BLL_01054146": "R4-P3-06", "01054146": "R4-P3-06", "1054146": "R4-P3-06", "BLL_01054147": "R4-P3-07", "01054147": "R4-P3-07", "1054147": "R4-P3-07", "BLL_01054148": "R4-P3-08", "01054148": "R4-P3-08", "1054148": "R4-P3-08", "BLL_01054149": "R4-P3-09", "01054149": "R4-P3-09", "1054149": "R4-P3-09", "BLL_01054150": "R4-P3-10", "01054150": "R4-P3-10", "1054150": "R4-P3-10", "BLL_01054151": "R4-P3-11", "01054151": "R4-P3-11", "1054151": "R4-P3-11", "BLL_01054152": "R4-P3-12", "01054152": "R4-P3-12", "1054152": "R4-P3-12", "BLL_01054153": "R4-P3-13", "01054153": "R4-P3-13", "1054153": "R4-P3-13", "BLL_01054154": "R4-P3-14", "01054154": "R4-P3-14", "1054154": "R4-P3-14", "BLL_01054155": "R4-P3-15", "01054155": "R4-P3-15", "1054155": "R4-P3-15", "BLL_01054156": "R4-P3-16", "01054156": "R4-P3-16", "1054156": "R4-P3-16", "BLL_01054157": "R4-P3-17", "01054157": "R4-P3-17", "1054157": "R4-P3-17", "BLL_01054158": "R4-P3-18", "01054158": "R4-P3-18", "1054158": "R4-P3-18", "BLL_01054159": "R4-P3-19", "01054159": "R4-P3-19", "1054159": "R4-P3-19", "BLL_01054160": "R4-P3-20", "01054160": "R4-P3-20", "1054160": "R4-P3-20", "BLL_01054161": "R4-P3-21", "01054161": "R4-P3-21", "1054161": "R4-P3-21", "BLL_01054162": "R4-P3-22", "01054162": "R4-P3-22", "1054162": "R4-P3-22", "BLL_01054163": "R4-P3-23", "01054163": "R4-P3-23", "1054163": "R4-P3-23", "BLL_01054164": "R4-P3-24", "01054164": "R4-P3-24", "1054164": "R4-P3-24", "BLL_01054165": "R4-P3-25", "01054165": "R4-P3-25", "1054165": "R4-P3-25", "BLL_01054166": "R4-P4-01", "01054166": "R4-P4-01", "1054166": "R4-P4-01", "BLL_01054167": "R4-P4-02", "01054167": "R4-P4-02", "1054167": "R4-P4-02", "BLL_01054168": "R4-P4-03", "01054168": "R4-P4-03", "1054168": "R4-P4-03", "BLL_01054169": "R4-P4-04", "01054169": "R4-P4-04", "1054169": "R4-P4-04", "BLL_01054170": "R4-P4-05", "01054170": "R4-P4-05", "1054170": "R4-P4-05", "BLL_01054171": "R4-P4-06", "01054171": "R4-P4-06", "1054171": "R4-P4-06", "BLL_01054172": "R4-P4-07", "01054172": "R4-P4-07", "1054172": "R4-P4-07", "BLL_01054173": "R4-P4-08", "01054173": "R4-P4-08", "1054173": "R4-P4-08", "BLL_01054174": "R4-P4-09", "01054174": "R4-P4-09", "1054174": "R4-P4-09", "BLL_01054175": "R4-P4-10", "01054175": "R4-P4-10", "1054175": "R4-P4-10", "BLL_01054176": "R4-P4-11", "01054176": "R4-P4-11", "1054176": "R4-P4-11", "BLL_01054177": "R4-P4-12", "01054177": "R4-P4-12", "1054177": "R4-P4-12", "BLL_01054178": "R4-P4-13", "01054178": "R4-P4-13", "1054178": "R4-P4-13", "BLL_01054179": "R4-P4-14", "01054179": "R4-P4-14", "1054179": "R4-P4-14", "BLL_01054180": "R4-P4-15", "01054180": "R4-P4-15", "1054180": "R4-P4-15", "BLL_01054181": "R4-P4-16", "01054181": "R4-P4-16", "1054181": "R4-P4-16", "BLL_01054182": "R4-P4-17", "01054182": "R4-P4-17", "1054182": "R4-P4-17", "BLL_01054183": "R4-P4-18", "01054183": "R4-P4-18", "1054183": "R4-P4-18", "BLL_01054184": "R4-P4-19", "01054184": "R4-P4-19", "1054184": "R4-P4-19", "BLL_01054185": "R4-P4-20", "01054185": "R4-P4-20", "1054185": "R4-P4-20", "BLL_01054186": "R4-P4-21", "01054186": "R4-P4-21", "1054186": "R4-P4-21", "BLL_01054187": "R4-P4-22", "01054187": "R4-P4-22", "1054187": "R4-P4-22", "BLL_01054188": "R4-P4-23", "01054188": "R4-P4-23", "1054188": "R4-P4-23", "BLL_01054189": "R4-P4-24", "01054189": "R4-P4-24", "1054189": "R4-P4-24", "BLL_01054190": "R4-P4-25", "01054190": "R4-P4-25", "1054190": "R4-P4-25", "BLL_01054191": "R4-P5-01", "01054191": "R4-P5-01", "1054191": "R4-P5-01", "BLL_01054192": "R4-P5-02", "01054192": "R4-P5-02", "1054192": "R4-P5-02", "BLL_01054193": "R4-P5-03", "01054193": "R4-P5-03", "1054193": "R4-P5-03", "BLL_01054194": "R4-P5-04", "01054194": "R4-P5-04", "1054194": "R4-P5-04", "BLL_01054195": "R4-P5-05", "01054195": "R4-P5-05", "1054195": "R4-P5-05", "BLL_01054196": "R4-P5-06", "01054196": "R4-P5-06", "1054196": "R4-P5-06", "BLL_01054197": "R4-P5-07", "01054197": "R4-P5-07", "1054197": "R4-P5-07", "BLL_01054198": "R4-P5-08", "01054198": "R4-P5-08", "1054198": "R4-P5-08", "BLL_01054199": "R4-P5-09", "01054199": "R4-P5-09", "1054199": "R4-P5-09", "BLL_01054200": "R4-P5-10", "01054200": "R4-P5-10", "1054200": "R4-P5-10", "BLL_01054201": "R4-P5-11", "01054201": "R4-P5-11", "1054201": "R4-P5-11", "BLL_01054202": "R4-P5-12", "01054202": "R4-P5-12", "1054202": "R4-P5-12", "BLL_01054203": "R4-P5-13", "01054203": "R4-P5-13", "1054203": "R4-P5-13", "BLL_01054204": "R4-P5-14", "01054204": "R4-P5-14", "1054204": "R4-P5-14", "BLL_01054205": "R4-P5-15", "01054205": "R4-P5-15", "1054205": "R4-P5-15", "BLL_01054206": "R4-P5-16", "01054206": "R4-P5-16", "1054206": "R4-P5-16", "BLL_01054207": "R4-P5-17", "01054207": "R4-P5-17", "1054207": "R4-P5-17", "BLL_01054208": "R4-P5-18", "01054208": "R4-P5-18", "1054208": "R4-P5-18", "BLL_01054209": "R4-P5-19", "01054209": "R4-P5-19", "1054209": "R4-P5-19", "BLL_01054210": "R4-P5-20", "01054210": "R4-P5-20", "1054210": "R4-P5-20", "BLL_01054211": "R4-P5-21", "01054211": "R4-P5-21", "1054211": "R4-P5-21", "BLL_01054212": "R4-P5-22", "01054212": "R4-P5-22", "1054212": "R4-P5-22", "BLL_01054213": "R4-P5-23", "01054213": "R4-P5-23", "1054213": "R4-P5-23", "BLL_01054214": "R4-P5-24", "01054214": "R4-P5-24", "1054214": "R4-P5-24", "BLL_01054215": "R4-P5-25", "01054215": "R4-P5-25", "1054215": "R4-P5-25", "BLL_01054576": "R5-P1-01", "01054576": "R5-P1-01", "1054576": "R5-P1-01", "BLL_01054577": "R5-P1-02", "01054577": "R5-P1-02", "1054577": "R5-P1-02", "BLL_01054578": "R5-P1-03", "01054578": "R5-P1-03", "1054578": "R5-P1-03", "BLL_01054579": "R5-P1-04", "01054579": "R5-P1-04", "1054579": "R5-P1-04", "BLL_01054580": "R5-P1-05", "01054580": "R5-P1-05", "1054580": "R5-P1-05", "BLL_01054581": "R5-P1-06", "01054581": "R5-P1-06", "1054581": "R5-P1-06", "BLL_01054582": "R5-P1-07", "01054582": "R5-P1-07", "1054582": "R5-P1-07", "BLL_01054583": "R5-P1-08", "01054583": "R5-P1-08", "1054583": "R5-P1-08", "BLL_01054584": "R5-P1-09", "01054584": "R5-P1-09", "1054584": "R5-P1-09", "BLL_01054585": "R5-P1-10", "01054585": "R5-P1-10", "1054585": "R5-P1-10", "BLL_01054586": "R5-P1-11", "01054586": "R5-P1-11", "1054586": "R5-P1-11", "BLL_01054587": "R5-P1-12", "01054587": "R5-P1-12", "1054587": "R5-P1-12", "BLL_01054588": "R5-P1-13", "01054588": "R5-P1-13", "1054588": "R5-P1-13", "BLL_01054589": "R5-P1-14", "01054589": "R5-P1-14", "1054589": "R5-P1-14", "BLL_01054590": "R5-P1-15", "01054590": "R5-P1-15", "1054590": "R5-P1-15", "BLL_01054591": "R5-P1-16", "01054591": "R5-P1-16", "1054591": "R5-P1-16", "BLL_01054592": "R5-P1-17", "01054592": "R5-P1-17", "1054592": "R5-P1-17", "BLL_01054593": "R5-P1-18", "01054593": "R5-P1-18", "1054593": "R5-P1-18", "BLL_01054594": "R5-P1-19", "01054594": "R5-P1-19", "1054594": "R5-P1-19", "BLL_01054595": "R5-P1-20", "01054595": "R5-P1-20", "1054595": "R5-P1-20", "BLL_01054596": "R5-P1-21", "01054596": "R5-P1-21", "1054596": "R5-P1-21", "BLL_01054597": "R5-P1-22", "01054597": "R5-P1-22", "1054597": "R5-P1-22", "BLL_01054598": "R5-P1-23", "01054598": "R5-P1-23", "1054598": "R5-P1-23", "BLL_01054599": "R5-P1-24", "01054599": "R5-P1-24", "1054599": "R5-P1-24", "BLL_01054600": "R5-P1-25", "01054600": "R5-P1-25", "1054600": "R5-P1-25", "BLL_01054601": "R5-P2-01", "01054601": "R5-P2-01", "1054601": "R5-P2-01", "BLL_01054602": "R5-P2-02", "01054602": "R5-P2-02", "1054602": "R5-P2-02", "BLL_01054603": "R5-P2-03", "01054603": "R5-P2-03", "1054603": "R5-P2-03", "BLL_01054604": "R5-P2-04", "01054604": "R5-P2-04", "1054604": "R5-P2-04", "BLL_01054605": "R5-P2-05", "01054605": "R5-P2-05", "1054605": "R5-P2-05", "BLL_01054606": "R5-P2-06", "01054606": "R5-P2-06", "1054606": "R5-P2-06", "BLL_01054607": "R5-P2-07", "01054607": "R5-P2-07", "1054607": "R5-P2-07", "BLL_01054608": "R5-P2-08", "01054608": "R5-P2-08", "1054608": "R5-P2-08", "BLL_01054609": "R5-P2-09", "01054609": "R5-P2-09", "1054609": "R5-P2-09", "BLL_01054610": "R5-P2-10", "01054610": "R5-P2-10", "1054610": "R5-P2-10", "BLL_01054611": "R5-P2-11", "01054611": "R5-P2-11", "1054611": "R5-P2-11", "BLL_01054612": "R5-P2-12", "01054612": "R5-P2-12", "1054612": "R5-P2-12", "BLL_01054613": "R5-P2-13", "01054613": "R5-P2-13", "1054613": "R5-P2-13", "BLL_01054614": "R5-P2-14", "01054614": "R5-P2-14", "1054614": "R5-P2-14", "BLL_01054615": "R5-P2-15", "01054615": "R5-P2-15", "1054615": "R5-P2-15", "BLL_01054616": "R5-P2-16", "01054616": "R5-P2-16", "1054616": "R5-P2-16", "BLL_01054617": "R5-P2-17", "01054617": "R5-P2-17", "1054617": "R5-P2-17", "BLL_01054618": "R5-P2-18", "01054618": "R5-P2-18", "1054618": "R5-P2-18", "BLL_01054619": "R5-P2-19", "01054619": "R5-P2-19", "1054619": "R5-P2-19", "BLL_01054620": "R5-P2-20", "01054620": "R5-P2-20", "1054620": "R5-P2-20", "BLL_01054621": "R5-P2-21", "01054621": "R5-P2-21", "1054621": "R5-P2-21", "BLL_01054622": "R5-P2-22", "01054622": "R5-P2-22", "1054622": "R5-P2-22", "BLL_01054623": "R5-P2-23", "01054623": "R5-P2-23", "1054623": "R5-P2-23", "BLL_01054624": "R5-P2-24", "01054624": "R5-P2-24", "1054624": "R5-P2-24", "BLL_01054625": "R5-P2-25", "01054625": "R5-P2-25", "1054625": "R5-P2-25", "BLL_01054626": "R5-P3-01", "01054626": "R5-P3-01", "1054626": "R5-P3-01", "BLL_01054627": "R5-P3-02", "01054627": "R5-P3-02", "1054627": "R5-P3-02", "BLL_01054628": "R5-P3-03", "01054628": "R5-P3-03", "1054628": "R5-P3-03", "BLL_01054629": "R5-P3-04", "01054629": "R5-P3-04", "1054629": "R5-P3-04", "BLL_01054630": "R5-P3-05", "01054630": "R5-P3-05", "1054630": "R5-P3-05", "BLL_01054631": "R5-P3-06", "01054631": "R5-P3-06", "1054631": "R5-P3-06", "BLL_01054632": "R5-P3-07", "01054632": "R5-P3-07", "1054632": "R5-P3-07", "BLL_01054633": "R5-P3-08", "01054633": "R5-P3-08", "1054633": "R5-P3-08", "BLL_01054634": "R5-P3-09", "01054634": "R5-P3-09", "1054634": "R5-P3-09", "BLL_01054635": "R5-P3-10", "01054635": "R5-P3-10", "1054635": "R5-P3-10", "BLL_01054636": "R5-P3-11", "01054636": "R5-P3-11", "1054636": "R5-P3-11", "BLL_01054637": "R5-P3-12", "01054637": "R5-P3-12", "1054637": "R5-P3-12", "BLL_01054638": "R5-P3-13", "01054638": "R5-P3-13", "1054638": "R5-P3-13", "BLL_01054639": "R5-P3-14", "01054639": "R5-P3-14", "1054639": "R5-P3-14", "BLL_01054640": "R5-P3-15", "01054640": "R5-P3-15", "1054640": "R5-P3-15", "BLL_01054641": "R5-P3-16", "01054641": "R5-P3-16", "1054641": "R5-P3-16", "BLL_01054642": "R5-P3-17", "01054642": "R5-P3-17", "1054642": "R5-P3-17", "BLL_01054643": "R5-P3-18", "01054643": "R5-P3-18", "1054643": "R5-P3-18", "BLL_01054644": "R5-P3-19", "01054644": "R5-P3-19", "1054644": "R5-P3-19", "BLL_01054645": "R5-P3-20", "01054645": "R5-P3-20", "1054645": "R5-P3-20", "BLL_01054646": "R5-P3-21", "01054646": "R5-P3-21", "1054646": "R5-P3-21", "BLL_01054647": "R5-P3-22", "01054647": "R5-P3-22", "1054647": "R5-P3-22", "BLL_01054648": "R5-P3-23", "01054648": "R5-P3-23", "1054648": "R5-P3-23", "BLL_01054649": "R5-P3-24", "01054649": "R5-P3-24", "1054649": "R5-P3-24", "BLL_01054650": "R5-P3-25", "01054650": "R5-P3-25", "1054650": "R5-P3-25", "BLL_01054651": "R5-P4-01", "01054651": "R5-P4-01", "1054651": "R5-P4-01", "BLL_01054652": "R5-P4-02", "01054652": "R5-P4-02", "1054652": "R5-P4-02", "BLL_01054653": "R5-P4-03", "01054653": "R5-P4-03", "1054653": "R5-P4-03", "BLL_01054654": "R5-P4-04", "01054654": "R5-P4-04", "1054654": "R5-P4-04", "BLL_01054655": "R5-P4-05", "01054655": "R5-P4-05", "1054655": "R5-P4-05", "BLL_01054656": "R5-P4-06", "01054656": "R5-P4-06", "1054656": "R5-P4-06", "BLL_01054657": "R5-P4-07", "01054657": "R5-P4-07", "1054657": "R5-P4-07", "BLL_01054658": "R5-P4-08", "01054658": "R5-P4-08", "1054658": "R5-P4-08", "BLL_01054659": "R5-P4-09", "01054659": "R5-P4-09", "1054659": "R5-P4-09", "BLL_01054660": "R5-P4-10", "01054660": "R5-P4-10", "1054660": "R5-P4-10", "BLL_01054661": "R5-P4-11", "01054661": "R5-P4-11", "1054661": "R5-P4-11", "BLL_01054662": "R5-P4-12", "01054662": "R5-P4-12", "1054662": "R5-P4-12", "BLL_01054663": "R5-P4-13", "01054663": "R5-P4-13", "1054663": "R5-P4-13", "BLL_01054664": "R5-P4-14", "01054664": "R5-P4-14", "1054664": "R5-P4-14", "BLL_01054665": "R5-P4-15", "01054665": "R5-P4-15", "1054665": "R5-P4-15", "BLL_01054666": "R5-P4-16", "01054666": "R5-P4-16", "1054666": "R5-P4-16", "BLL_01054667": "R5-P4-17", "01054667": "R5-P4-17", "1054667": "R5-P4-17", "BLL_01054668": "R5-P4-18", "01054668": "R5-P4-18", "1054668": "R5-P4-18", "BLL_01054669": "R5-P4-19", "01054669": "R5-P4-19", "1054669": "R5-P4-19", "BLL_01054670": "R5-P4-20", "01054670": "R5-P4-20", "1054670": "R5-P4-20", "BLL_01054671": "R5-P4-21", "01054671": "R5-P4-21", "1054671": "R5-P4-21", "BLL_01054672": "R5-P4-22", "01054672": "R5-P4-22", "1054672": "R5-P4-22", "BLL_01054673": "R5-P4-23", "01054673": "R5-P4-23", "1054673": "R5-P4-23", "BLL_01054674": "R5-P4-24", "01054674": "R5-P4-24", "1054674": "R5-P4-24", "BLL_01054675": "R5-P4-25", "01054675": "R5-P4-25", "1054675": "R5-P4-25", "BLL_01054676": "R5-P5-01", "01054676": "R5-P5-01", "1054676": "R5-P5-01", "BLL_01054677": "R5-P5-02", "01054677": "R5-P5-02", "1054677": "R5-P5-02", "BLL_01054678": "R5-P5-03", "01054678": "R5-P5-03", "1054678": "R5-P5-03", "BLL_01054679": "R5-P5-04", "01054679": "R5-P5-04", "1054679": "R5-P5-04", "BLL_01054680": "R5-P5-05", "01054680": "R5-P5-05", "1054680": "R5-P5-05", "BLL_01054681": "R5-P5-06", "01054681": "R5-P5-06", "1054681": "R5-P5-06", "BLL_01054682": "R5-P5-07", "01054682": "R5-P5-07", "1054682": "R5-P5-07", "BLL_01054683": "R5-P5-08", "01054683": "R5-P5-08", "1054683": "R5-P5-08", "BLL_01054684": "R5-P5-09", "01054684": "R5-P5-09", "1054684": "R5-P5-09", "BLL_01054685": "R5-P5-10", "01054685": "R5-P5-10", "1054685": "R5-P5-10", "BLL_01054686": "R5-P5-11", "01054686": "R5-P5-11", "1054686": "R5-P5-11", "BLL_01054687": "R5-P5-12", "01054687": "R5-P5-12", "1054687": "R5-P5-12", "BLL_01054688": "R5-P5-13", "01054688": "R5-P5-13", "1054688": "R5-P5-13", "BLL_01054689": "R5-P5-14", "01054689": "R5-P5-14", "1054689": "R5-P5-14", "BLL_01054690": "R5-P5-15", "01054690": "R5-P5-15", "1054690": "R5-P5-15", "BLL_01054691": "R5-P5-16", "01054691": "R5-P5-16", "1054691": "R5-P5-16", "BLL_01054692": "R5-P5-17", "01054692": "R5-P5-17", "1054692": "R5-P5-17", "BLL_01054693": "R5-P5-18", "01054693": "R5-P5-18", "1054693": "R5-P5-18", "BLL_01054694": "R5-P5-19", "01054694": "R5-P5-19", "1054694": "R5-P5-19", "BLL_01054695": "R5-P5-20", "01054695": "R5-P5-20", "1054695": "R5-P5-20", "BLL_01054696": "R5-P5-21", "01054696": "R5-P5-21", "1054696": "R5-P5-21", "BLL_01054697": "R5-P5-22", "01054697": "R5-P5-22", "1054697": "R5-P5-22", "BLL_01054698": "R5-P5-23", "01054698": "R5-P5-23", "1054698": "R5-P5-23", "BLL_01054699": "R5-P5-24", "01054699": "R5-P5-24", "1054699": "R5-P5-24", "BLL_01054700": "R5-P5-25", "01054700": "R5-P5-25", "1054700": "R5-P5-25", "BLL_01054701": "R6-P1-01", "01054701": "R6-P1-01", "1054701": "R6-P1-01", "BLL_01054702": "R6-P1-02", "01054702": "R6-P1-02", "1054702": "R6-P1-02", "BLL_01054703": "R6-P1-03", "01054703": "R6-P1-03", "1054703": "R6-P1-03", "BLL_01054704": "R6-P1-04", "01054704": "R6-P1-04", "1054704": "R6-P1-04", "BLL_01054705": "R6-P1-05", "01054705": "R6-P1-05", "1054705": "R6-P1-05", "BLL_01054706": "R6-P1-06", "01054706": "R6-P1-06", "1054706": "R6-P1-06", "BLL_01054707": "R6-P1-07", "01054707": "R6-P1-07", "1054707": "R6-P1-07", "BLL_01054708": "R6-P1-08", "01054708": "R6-P1-08", "1054708": "R6-P1-08", "BLL_01054709": "R6-P1-09", "01054709": "R6-P1-09", "1054709": "R6-P1-09", "BLL_01054710": "R6-P1-10", "01054710": "R6-P1-10", "1054710": "R6-P1-10", "BLL_01054711": "R6-P1-11", "01054711": "R6-P1-11", "1054711": "R6-P1-11", "BLL_01054712": "R6-P1-12", "01054712": "R6-P1-12", "1054712": "R6-P1-12", "BLL_01054713": "R6-P1-13", "01054713": "R6-P1-13", "1054713": "R6-P1-13", "BLL_01054714": "R6-P1-14", "01054714": "R6-P1-14", "1054714": "R6-P1-14", "BLL_01054715": "R6-P1-15", "01054715": "R6-P1-15", "1054715": "R6-P1-15", "BLL_01054716": "R6-P1-16", "01054716": "R6-P1-16", "1054716": "R6-P1-16", "BLL_01054717": "R6-P1-17", "01054717": "R6-P1-17", "1054717": "R6-P1-17", "BLL_01054718": "R6-P1-18", "01054718": "R6-P1-18", "1054718": "R6-P1-18", "BLL_01054719": "R6-P1-19", "01054719": "R6-P1-19", "1054719": "R6-P1-19", "BLL_01054720": "R6-P1-20", "01054720": "R6-P1-20", "1054720": "R6-P1-20", "BLL_01054721": "R6-P1-21", "01054721": "R6-P1-21", "1054721": "R6-P1-21", "BLL_01054722": "R6-P1-22", "01054722": "R6-P1-22", "1054722": "R6-P1-22", "BLL_01054723": "R6-P1-23", "01054723": "R6-P1-23", "1054723": "R6-P1-23", "BLL_01054724": "R6-P1-24", "01054724": "R6-P1-24", "1054724": "R6-P1-24", "BLL_01054725": "R6-P1-25", "01054725": "R6-P1-25", "1054725": "R6-P1-25", "BLL_01054726": "R6-P2-01", "01054726": "R6-P2-01", "1054726": "R6-P2-01", "BLL_01054727": "R6-P2-02", "01054727": "R6-P2-02", "1054727": "R6-P2-02", "BLL_01054728": "R6-P2-03", "01054728": "R6-P2-03", "1054728": "R6-P2-03", "BLL_01054729": "R6-P2-04", "01054729": "R6-P2-04", "1054729": "R6-P2-04", "BLL_01054730": "R6-P2-05", "01054730": "R6-P2-05", "1054730": "R6-P2-05", "BLL_01054731": "R6-P2-06", "01054731": "R6-P2-06", "1054731": "R6-P2-06", "BLL_01054732": "R6-P2-07", "01054732": "R6-P2-07", "1054732": "R6-P2-07", "BLL_01054733": "R6-P2-08", "01054733": "R6-P2-08", "1054733": "R6-P2-08", "BLL_01054734": "R6-P2-09", "01054734": "R6-P2-09", "1054734": "R6-P2-09", "BLL_01054735": "R6-P2-10", "01054735": "R6-P2-10", "1054735": "R6-P2-10", "BLL_01054736": "R6-P2-11", "01054736": "R6-P2-11", "1054736": "R6-P2-11", "BLL_01054737": "R6-P2-12", "01054737": "R6-P2-12", "1054737": "R6-P2-12", "BLL_01054738": "R6-P2-13", "01054738": "R6-P2-13", "1054738": "R6-P2-13", "BLL_01054739": "R6-P2-14", "01054739": "R6-P2-14", "1054739": "R6-P2-14", "BLL_01054740": "R6-P2-15", "01054740": "R6-P2-15", "1054740": "R6-P2-15", "BLL_01054741": "R6-P2-16", "01054741": "R6-P2-16", "1054741": "R6-P2-16", "BLL_01054742": "R6-P2-17", "01054742": "R6-P2-17", "1054742": "R6-P2-17", "BLL_01054743": "R6-P2-18", "01054743": "R6-P2-18", "1054743": "R6-P2-18", "BLL_01054744": "R6-P2-19", "01054744": "R6-P2-19", "1054744": "R6-P2-19", "BLL_01054745": "R6-P2-20", "01054745": "R6-P2-20", "1054745": "R6-P2-20", "BLL_01054746": "R6-P2-21", "01054746": "R6-P2-21", "1054746": "R6-P2-21", "BLL_01054747": "R6-P2-22", "01054747": "R6-P2-22", "1054747": "R6-P2-22", "BLL_01054748": "R6-P2-23", "01054748": "R6-P2-23", "1054748": "R6-P2-23", "BLL_01054749": "R6-P2-24", "01054749": "R6-P2-24", "1054749": "R6-P2-24", "BLL_01054750": "R6-P2-25", "01054750": "R6-P2-25", "1054750": "R6-P2-25", "BLL_01054751": "R6-P3-01", "01054751": "R6-P3-01", "1054751": "R6-P3-01", "BLL_01054752": "R6-P3-02", "01054752": "R6-P3-02", "1054752": "R6-P3-02", "BLL_01054753": "R6-P3-03", "01054753": "R6-P3-03", "1054753": "R6-P3-03", "BLL_01054754": "R6-P3-04", "01054754": "R6-P3-04", "1054754": "R6-P3-04", "BLL_01054755": "R6-P3-05", "01054755": "R6-P3-05", "1054755": "R6-P3-05", "BLL_01054756": "R6-P3-06", "01054756": "R6-P3-06", "1054756": "R6-P3-06", "BLL_01054757": "R6-P3-07", "01054757": "R6-P3-07", "1054757": "R6-P3-07", "BLL_01054758": "R6-P3-08", "01054758": "R6-P3-08", "1054758": "R6-P3-08", "BLL_01054759": "R6-P3-09", "01054759": "R6-P3-09", "1054759": "R6-P3-09", "BLL_01054760": "R6-P3-10", "01054760": "R6-P3-10", "1054760": "R6-P3-10", "BLL_01054761": "R6-P3-11", "01054761": "R6-P3-11", "1054761": "R6-P3-11", "BLL_01054762": "R6-P3-12", "01054762": "R6-P3-12", "1054762": "R6-P3-12", "BLL_01054763": "R6-P3-13", "01054763": "R6-P3-13", "1054763": "R6-P3-13", "BLL_01054764": "R6-P3-14", "01054764": "R6-P3-14", "1054764": "R6-P3-14", "BLL_01054765": "R6-P3-15", "01054765": "R6-P3-15", "1054765": "R6-P3-15", "BLL_01054766": "R6-P3-16", "01054766": "R6-P3-16", "1054766": "R6-P3-16", "BLL_01054767": "R6-P3-17", "01054767": "R6-P3-17", "1054767": "R6-P3-17", "BLL_01054768": "R6-P3-18", "01054768": "R6-P3-18", "1054768": "R6-P3-18", "BLL_01054769": "R6-P3-19", "01054769": "R6-P3-19", "1054769": "R6-P3-19", "BLL_01054770": "R6-P3-20", "01054770": "R6-P3-20", "1054770": "R6-P3-20", "BLL_01054771": "R6-P3-21", "01054771": "R6-P3-21", "1054771": "R6-P3-21", "BLL_01054772": "R6-P3-22", "01054772": "R6-P3-22", "1054772": "R6-P3-22", "BLL_01054773": "R6-P3-23", "01054773": "R6-P3-23", "1054773": "R6-P3-23", "BLL_01054774": "R6-P3-24", "01054774": "R6-P3-24", "1054774": "R6-P3-24", "BLL_01054775": "R6-P3-25", "01054775": "R6-P3-25", "1054775": "R6-P3-25", "BLL_01054776": "R6-P4-01", "01054776": "R6-P4-01", "1054776": "R6-P4-01", "BLL_01054777": "R6-P4-02", "01054777": "R6-P4-02", "1054777": "R6-P4-02", "BLL_01054778": "R6-P4-03", "01054778": "R6-P4-03", "1054778": "R6-P4-03", "BLL_01054779": "R6-P4-04", "01054779": "R6-P4-04", "1054779": "R6-P4-04", "BLL_01054780": "R6-P4-05", "01054780": "R6-P4-05", "1054780": "R6-P4-05", "BLL_01054781": "R6-P4-06", "01054781": "R6-P4-06", "1054781": "R6-P4-06", "BLL_01054782": "R6-P4-07", "01054782": "R6-P4-07", "1054782": "R6-P4-07", "BLL_01054783": "R6-P4-08", "01054783": "R6-P4-08", "1054783": "R6-P4-08", "BLL_01054784": "R6-P4-09", "01054784": "R6-P4-09", "1054784": "R6-P4-09", "BLL_01054785": "R6-P4-10", "01054785": "R6-P4-10", "1054785": "R6-P4-10", "BLL_01054786": "R6-P4-11", "01054786": "R6-P4-11", "1054786": "R6-P4-11", "BLL_01054787": "R6-P4-12", "01054787": "R6-P4-12", "1054787": "R6-P4-12", "BLL_01054788": "R6-P4-13", "01054788": "R6-P4-13", "1054788": "R6-P4-13", "BLL_01054789": "R6-P4-14", "01054789": "R6-P4-14", "1054789": "R6-P4-14", "BLL_01054790": "R6-P4-15", "01054790": "R6-P4-15", "1054790": "R6-P4-15", "BLL_01054791": "R6-P4-16", "01054791": "R6-P4-16", "1054791": "R6-P4-16", "BLL_01054792": "R6-P4-17", "01054792": "R6-P4-17", "1054792": "R6-P4-17", "BLL_01054793": "R6-P4-18", "01054793": "R6-P4-18", "1054793": "R6-P4-18", "BLL_01054794": "R6-P4-19", "01054794": "R6-P4-19", "1054794": "R6-P4-19", "BLL_01054795": "R6-P4-20", "01054795": "R6-P4-20", "1054795": "R6-P4-20", "BLL_01054796": "R6-P4-21", "01054796": "R6-P4-21", "1054796": "R6-P4-21", "BLL_01054797": "R6-P4-22", "01054797": "R6-P4-22", "1054797": "R6-P4-22", "BLL_01054798": "R6-P4-23", "01054798": "R6-P4-23", "1054798": "R6-P4-23", "BLL_01054799": "R6-P4-24", "01054799": "R6-P4-24", "1054799": "R6-P4-24", "BLL_01054800": "R6-P4-25", "01054800": "R6-P4-25", "1054800": "R6-P4-25", "BLL_01054801": "R6-P5-01", "01054801": "R6-P5-01", "1054801": "R6-P5-01", "BLL_01054802": "R6-P5-02", "01054802": "R6-P5-02", "1054802": "R6-P5-02", "BLL_01054803": "R6-P5-03", "01054803": "R6-P5-03", "1054803": "R6-P5-03", "BLL_01054804": "R6-P5-04", "01054804": "R6-P5-04", "1054804": "R6-P5-04", "BLL_01054805": "R6-P5-05", "01054805": "R6-P5-05", "1054805": "R6-P5-05", "BLL_01054806": "R6-P5-06", "01054806": "R6-P5-06", "1054806": "R6-P5-06", "BLL_01054807": "R6-P5-07", "01054807": "R6-P5-07", "1054807": "R6-P5-07", "BLL_01054808": "R6-P5-08", "01054808": "R6-P5-08", "1054808": "R6-P5-08", "BLL_01054809": "R6-P5-09", "01054809": "R6-P5-09", "1054809": "R6-P5-09", "BLL_01054810": "R6-P5-10", "01054810": "R6-P5-10", "1054810": "R6-P5-10", "BLL_01054811": "R6-P5-11", "01054811": "R6-P5-11", "1054811": "R6-P5-11", "BLL_01054812": "R6-P5-12", "01054812": "R6-P5-12", "1054812": "R6-P5-12", "BLL_01054813": "R6-P5-13", "01054813": "R6-P5-13", "1054813": "R6-P5-13", "BLL_01054814": "R6-P5-14", "01054814": "R6-P5-14", "1054814": "R6-P5-14", "BLL_01054815": "R6-P5-15", "01054815": "R6-P5-15", "1054815": "R6-P5-15", "BLL_01054816": "R6-P5-16", "01054816": "R6-P5-16", "1054816": "R6-P5-16", "BLL_01054817": "R6-P5-17", "01054817": "R6-P5-17", "1054817": "R6-P5-17", "BLL_01054818": "R6-P5-18", "01054818": "R6-P5-18", "1054818": "R6-P5-18", "BLL_01054819": "R6-P5-19", "01054819": "R6-P5-19", "1054819": "R6-P5-19", "BLL_01054820": "R6-P5-20", "01054820": "R6-P5-20", "1054820": "R6-P5-20", "BLL_01054821": "R6-P5-21", "01054821": "R6-P5-21", "1054821": "R6-P5-21", "BLL_01054822": "R6-P5-22", "01054822": "R6-P5-22", "1054822": "R6-P5-22", "BLL_01054823": "R6-P5-23", "01054823": "R6-P5-23", "1054823": "R6-P5-23", "BLL_01054824": "R6-P5-24", "01054824": "R6-P5-24", "1054824": "R6-P5-24", "BLL_01054825": "R6-P5-25", "01054825": "R6-P5-25", "1054825": "R6-P5-25", "BLL_01054826": "R7-P1-01", "01054826": "R7-P1-01", "1054826": "R7-P1-01", "BLL_01054827": "R7-P1-02", "01054827": "R7-P1-02", "1054827": "R7-P1-02", "BLL_01054828": "R7-P1-03", "01054828": "R7-P1-03", "1054828": "R7-P1-03", "BLL_01054829": "R7-P1-04", "01054829": "R7-P1-04", "1054829": "R7-P1-04", "BLL_01054830": "R7-P1-05", "01054830": "R7-P1-05", "1054830": "R7-P1-05", "BLL_01054831": "R7-P1-06", "01054831": "R7-P1-06", "1054831": "R7-P1-06", "BLL_01054832": "R7-P1-07", "01054832": "R7-P1-07", "1054832": "R7-P1-07", "BLL_01054833": "R7-P1-08", "01054833": "R7-P1-08", "1054833": "R7-P1-08", "BLL_01054834": "R7-P1-09", "01054834": "R7-P1-09", "1054834": "R7-P1-09", "BLL_01054835": "R7-P1-10", "01054835": "R7-P1-10", "1054835": "R7-P1-10", "BLL_01054836": "R7-P1-11", "01054836": "R7-P1-11", "1054836": "R7-P1-11", "BLL_01054837": "R7-P1-12", "01054837": "R7-P1-12", "1054837": "R7-P1-12", "BLL_01054838": "R7-P1-13", "01054838": "R7-P1-13", "1054838": "R7-P1-13", "BLL_01054839": "R7-P1-14", "01054839": "R7-P1-14", "1054839": "R7-P1-14", "BLL_01054840": "R7-P1-15", "01054840": "R7-P1-15", "1054840": "R7-P1-15", "BLL_01054841": "R7-P1-16", "01054841": "R7-P1-16", "1054841": "R7-P1-16", "BLL_01054842": "R7-P1-17", "01054842": "R7-P1-17", "1054842": "R7-P1-17", "BLL_01054843": "R7-P1-18", "01054843": "R7-P1-18", "1054843": "R7-P1-18", "BLL_01054844": "R7-P1-19", "01054844": "R7-P1-19", "1054844": "R7-P1-19", "BLL_01054845": "R7-P1-20", "01054845": "R7-P1-20", "1054845": "R7-P1-20", "BLL_01054846": "R7-P1-21", "01054846": "R7-P1-21", "1054846": "R7-P1-21", "BLL_01054847": "R7-P1-22", "01054847": "R7-P1-22", "1054847": "R7-P1-22", "BLL_01054848": "R7-P1-23", "01054848": "R7-P1-23", "1054848": "R7-P1-23", "BLL_01054849": "R7-P1-24", "01054849": "R7-P1-24", "1054849": "R7-P1-24", "BLL_01054850": "R7-P1-25", "01054850": "R7-P1-25", "1054850": "R7-P1-25", "BLL_01054851": "R7-P2-01", "01054851": "R7-P2-01", "1054851": "R7-P2-01", "BLL_01054852": "R7-P2-02", "01054852": "R7-P2-02", "1054852": "R7-P2-02", "BLL_01054853": "R7-P2-03", "01054853": "R7-P2-03", "1054853": "R7-P2-03", "BLL_01054854": "R7-P2-04", "01054854": "R7-P2-04", "1054854": "R7-P2-04", "BLL_01054855": "R7-P2-05", "01054855": "R7-P2-05", "1054855": "R7-P2-05", "BLL_01054856": "R7-P2-06", "01054856": "R7-P2-06", "1054856": "R7-P2-06", "BLL_01054857": "R7-P2-07", "01054857": "R7-P2-07", "1054857": "R7-P2-07", "BLL_01054858": "R7-P2-08", "01054858": "R7-P2-08", "1054858": "R7-P2-08", "BLL_01054859": "R7-P2-09", "01054859": "R7-P2-09", "1054859": "R7-P2-09", "BLL_01054860": "R7-P2-10", "01054860": "R7-P2-10", "1054860": "R7-P2-10", "BLL_01054861": "R7-P2-11", "01054861": "R7-P2-11", "1054861": "R7-P2-11", "BLL_01054862": "R7-P2-12", "01054862": "R7-P2-12", "1054862": "R7-P2-12", "BLL_01054863": "R7-P2-13", "01054863": "R7-P2-13", "1054863": "R7-P2-13", "BLL_01054864": "R7-P2-14", "01054864": "R7-P2-14", "1054864": "R7-P2-14", "BLL_01054865": "R7-P2-15", "01054865": "R7-P2-15", "1054865": "R7-P2-15", "BLL_01054866": "R7-P2-16", "01054866": "R7-P2-16", "1054866": "R7-P2-16", "BLL_01054867": "R7-P2-17", "01054867": "R7-P2-17", "1054867": "R7-P2-17", "BLL_01054868": "R7-P2-18", "01054868": "R7-P2-18", "1054868": "R7-P2-18", "BLL_01054869": "R7-P2-19", "01054869": "R7-P2-19", "1054869": "R7-P2-19", "BLL_01054870": "R7-P2-20", "01054870": "R7-P2-20", "1054870": "R7-P2-20", "BLL_01054871": "R7-P2-21", "01054871": "R7-P2-21", "1054871": "R7-P2-21", "BLL_01054872": "R7-P2-22", "01054872": "R7-P2-22", "1054872": "R7-P2-22", "BLL_01054873": "R7-P2-23", "01054873": "R7-P2-23", "1054873": "R7-P2-23", "BLL_01054874": "R7-P2-24", "01054874": "R7-P2-24", "1054874": "R7-P2-24", "BLL_01054875": "R7-P2-25", "01054875": "R7-P2-25", "1054875": "R7-P2-25", "BLL_01054876": "R7-P3-01", "01054876": "R7-P3-01", "1054876": "R7-P3-01", "BLL_01054877": "R7-P3-02", "01054877": "R7-P3-02", "1054877": "R7-P3-02", "BLL_01054878": "R7-P3-03", "01054878": "R7-P3-03", "1054878": "R7-P3-03", "BLL_01054879": "R7-P3-04", "01054879": "R7-P3-04", "1054879": "R7-P3-04", "BLL_01054880": "R7-P3-05", "01054880": "R7-P3-05", "1054880": "R7-P3-05", "BLL_01054881": "R7-P3-06", "01054881": "R7-P3-06", "1054881": "R7-P3-06", "BLL_01054882": "R7-P3-07", "01054882": "R7-P3-07", "1054882": "R7-P3-07", "BLL_01054883": "R7-P3-08", "01054883": "R7-P3-08", "1054883": "R7-P3-08", "BLL_01054884": "R7-P3-09", "01054884": "R7-P3-09", "1054884": "R7-P3-09", "BLL_01054885": "R7-P3-10", "01054885": "R7-P3-10", "1054885": "R7-P3-10", "BLL_01054886": "R7-P3-11", "01054886": "R7-P3-11", "1054886": "R7-P3-11", "BLL_01054887": "R7-P3-12", "01054887": "R7-P3-12", "1054887": "R7-P3-12", "BLL_01054888": "R7-P3-13", "01054888": "R7-P3-13", "1054888": "R7-P3-13", "BLL_01054889": "R7-P3-14", "01054889": "R7-P3-14", "1054889": "R7-P3-14", "BLL_01054890": "R7-P3-15", "01054890": "R7-P3-15", "1054890": "R7-P3-15", "BLL_01054891": "R7-P3-16", "01054891": "R7-P3-16", "1054891": "R7-P3-16", "BLL_01054892": "R7-P3-17", "01054892": "R7-P3-17", "1054892": "R7-P3-17", "BLL_01054893": "R7-P3-18", "01054893": "R7-P3-18", "1054893": "R7-P3-18", "BLL_01054894": "R7-P3-19", "01054894": "R7-P3-19", "1054894": "R7-P3-19", "BLL_01054895": "R7-P3-20", "01054895": "R7-P3-20", "1054895": "R7-P3-20", "BLL_01054896": "R7-P3-21", "01054896": "R7-P3-21", "1054896": "R7-P3-21", "BLL_01054897": "R7-P3-22", "01054897": "R7-P3-22", "1054897": "R7-P3-22", "BLL_01054898": "R7-P3-23", "01054898": "R7-P3-23", "1054898": "R7-P3-23", "BLL_01054899": "R7-P3-24", "01054899": "R7-P3-24", "1054899": "R7-P3-24", "BLL_01054900": "R7-P3-25", "01054900": "R7-P3-25", "1054900": "R7-P3-25", "BLL_01054901": "R7-P4-01", "01054901": "R7-P4-01", "1054901": "R7-P4-01", "BLL_01054902": "R7-P4-02", "01054902": "R7-P4-02", "1054902": "R7-P4-02", "BLL_01054903": "R7-P4-03", "01054903": "R7-P4-03", "1054903": "R7-P4-03", "BLL_01054904": "R7-P4-04", "01054904": "R7-P4-04", "1054904": "R7-P4-04", "BLL_01054905": "R7-P4-05", "01054905": "R7-P4-05", "1054905": "R7-P4-05", "BLL_01054906": "R7-P4-06", "01054906": "R7-P4-06", "1054906": "R7-P4-06", "BLL_01054907": "R7-P4-07", "01054907": "R7-P4-07", "1054907": "R7-P4-07", "BLL_01054908": "R7-P4-08", "01054908": "R7-P4-08", "1054908": "R7-P4-08", "BLL_01054909": "R7-P4-09", "01054909": "R7-P4-09", "1054909": "R7-P4-09", "BLL_01054910": "R7-P4-10", "01054910": "R7-P4-10", "1054910": "R7-P4-10", "BLL_01054911": "R7-P4-11", "01054911": "R7-P4-11", "1054911": "R7-P4-11", "BLL_01054912": "R7-P4-12", "01054912": "R7-P4-12", "1054912": "R7-P4-12", "BLL_01054913": "R7-P4-13", "01054913": "R7-P4-13", "1054913": "R7-P4-13", "BLL_01054914": "R7-P4-14", "01054914": "R7-P4-14", "1054914": "R7-P4-14", "BLL_01054915": "R7-P4-15", "01054915": "R7-P4-15", "1054915": "R7-P4-15", "BLL_01054916": "R7-P4-16", "01054916": "R7-P4-16", "1054916": "R7-P4-16", "BLL_01054917": "R7-P4-17", "01054917": "R7-P4-17", "1054917": "R7-P4-17", "BLL_01054918": "R7-P4-18", "01054918": "R7-P4-18", "1054918": "R7-P4-18", "BLL_01054919": "R7-P4-19", "01054919": "R7-P4-19", "1054919": "R7-P4-19", "BLL_01054920": "R7-P4-20", "01054920": "R7-P4-20", "1054920": "R7-P4-20", "BLL_01054921": "R7-P4-21", "01054921": "R7-P4-21", "1054921": "R7-P4-21", "BLL_01054922": "R7-P4-22", "01054922": "R7-P4-22", "1054922": "R7-P4-22", "BLL_01054923": "R7-P4-23", "01054923": "R7-P4-23", "1054923": "R7-P4-23", "BLL_01054924": "R7-P4-24", "01054924": "R7-P4-24", "1054924": "R7-P4-24", "BLL_01054925": "R7-P4-25", "01054925": "R7-P4-25", "1054925": "R7-P4-25", "BLL_01054926": "R7-P5-01", "01054926": "R7-P5-01", "1054926": "R7-P5-01", "BLL_01054927": "R7-P5-02", "01054927": "R7-P5-02", "1054927": "R7-P5-02", "BLL_01054928": "R7-P5-03", "01054928": "R7-P5-03", "1054928": "R7-P5-03", "BLL_01054929": "R7-P5-04", "01054929": "R7-P5-04", "1054929": "R7-P5-04", "BLL_01054930": "R7-P5-05", "01054930": "R7-P5-05", "1054930": "R7-P5-05", "BLL_01054931": "R7-P5-06", "01054931": "R7-P5-06", "1054931": "R7-P5-06", "BLL_01054932": "R7-P5-07", "01054932": "R7-P5-07", "1054932": "R7-P5-07", "BLL_01054933": "R7-P5-08", "01054933": "R7-P5-08", "1054933": "R7-P5-08", "BLL_01054934": "R7-P5-09", "01054934": "R7-P5-09", "1054934": "R7-P5-09", "BLL_01054935": "R7-P5-10", "01054935": "R7-P5-10", "1054935": "R7-P5-10", "BLL_01054936": "R7-P5-11", "01054936": "R7-P5-11", "1054936": "R7-P5-11", "BLL_01054937": "R7-P5-12", "01054937": "R7-P5-12", "1054937": "R7-P5-12", "BLL_01054938": "R7-P5-13", "01054938": "R7-P5-13", "1054938": "R7-P5-13", "BLL_01054939": "R7-P5-14", "01054939": "R7-P5-14", "1054939": "R7-P5-14", "BLL_01054940": "R7-P5-15", "01054940": "R7-P5-15", "1054940": "R7-P5-15", "BLL_01054941": "R7-P5-16", "01054941": "R7-P5-16", "1054941": "R7-P5-16", "BLL_01054942": "R7-P5-17", "01054942": "R7-P5-17", "1054942": "R7-P5-17", "BLL_01054943": "R7-P5-18", "01054943": "R7-P5-18", "1054943": "R7-P5-18", "BLL_01054944": "R7-P5-19", "01054944": "R7-P5-19", "1054944": "R7-P5-19", "BLL_01054945": "R7-P5-20", "01054945": "R7-P5-20", "1054945": "R7-P5-20", "BLL_01054946": "R7-P5-21", "01054946": "R7-P5-21", "1054946": "R7-P5-21", "BLL_01054947": "R7-P5-22", "01054947": "R7-P5-22", "1054947": "R7-P5-22", "BLL_01054948": "R7-P5-23", "01054948": "R7-P5-23", "1054948": "R7-P5-23", "BLL_01054949": "R7-P5-24", "01054949": "R7-P5-24", "1054949": "R7-P5-24", "BLL_01054950": "R7-P5-25", "01054950": "R7-P5-25", "1054950": "R7-P5-25", "BLL_01081175": "RP1-P0-01", "01081175": "RP1-P0-01", "1081175": "RP1-P0-01", "BLL_01084285": "RP1-P0-01B", "01084285": "RP1-P0-01B", "1084285": "RP1-P0-01B", "BLL_01081178": "RP1-P0-02", "01081178": "RP1-P0-02", "1081178": "RP1-P0-02", "BLL_01084286": "RP1-P0-02B", "01084286": "RP1-P0-02B", "1084286": "RP1-P0-02B", "BLL_01081179": "RP1-P0-03", "01081179": "RP1-P0-03", "1081179": "RP1-P0-03", "BLL_01084287": "RP1-P0-03B", "01084287": "RP1-P0-03B", "1084287": "RP1-P0-03B", "BLL_01081180": "RP1-P0-04", "01081180": "RP1-P0-04", "1081180": "RP1-P0-04", "BLL_01084288": "RP1-P0-04B", "01084288": "RP1-P0-04B", "1084288": "RP1-P0-04B", "BLL_01081181": "RP1-P0-05", "01081181": "RP1-P0-05", "1081181": "RP1-P0-05", "BLL_01084289": "RP1-P0-05B", "01084289": "RP1-P0-05B", "1084289": "RP1-P0-05B", "BLL_01081182": "RP1-P0-06", "01081182": "RP1-P0-06", "1081182": "RP1-P0-06", "BLL_01084290": "RP1-P0-06B", "01084290": "RP1-P0-06B", "1084290": "RP1-P0-06B", "BLL_01081183": "RP1-P0-07", "01081183": "RP1-P0-07", "1081183": "RP1-P0-07", "BLL_01096709": "RP1-P0-07B", "01096709": "RP1-P0-07B", "1096709": "RP1-P0-07B", "BLL_01081184": "RP1-P0-08", "01081184": "RP1-P0-08", "1081184": "RP1-P0-08", "BLL_01096710": "RP1-P0-08B", "01096710": "RP1-P0-08B", "1096710": "RP1-P0-08B", "BLL_01081185": "RP1-P0-09", "01081185": "RP1-P0-09", "1081185": "RP1-P0-09", "BLL_01096711": "RP1-P0-09B", "01096711": "RP1-P0-09B", "1096711": "RP1-P0-09B", "BLL_01081193": "RP1-P1-01", "01081193": "RP1-P1-01", "1081193": "RP1-P1-01", "BLL_01085161": "RP1-P1-01B", "01085161": "RP1-P1-01B", "1085161": "RP1-P1-01B", "BLL_01081194": "RP1-P1-02", "01081194": "RP1-P1-02", "1081194": "RP1-P1-02", "BLL_01085162": "RP1-P1-02B", "01085162": "RP1-P1-02B", "1085162": "RP1-P1-02B", "BLL_01081195": "RP1-P1-03", "01081195": "RP1-P1-03", "1081195": "RP1-P1-03", "BLL_01085163": "RP1-P1-03B", "01085163": "RP1-P1-03B", "1085163": "RP1-P1-03B", "BLL_01081196": "RP1-P1-04", "01081196": "RP1-P1-04", "1081196": "RP1-P1-04", "BLL_01085164": "RP1-P1-04B", "01085164": "RP1-P1-04B", "1085164": "RP1-P1-04B", "BLL_01081197": "RP1-P1-05", "01081197": "RP1-P1-05", "1081197": "RP1-P1-05", "BLL_01085165": "RP1-P1-05B", "01085165": "RP1-P1-05B", "1085165": "RP1-P1-05B", "BLL_01081198": "RP1-P1-06", "01081198": "RP1-P1-06", "1081198": "RP1-P1-06", "BLL_01085166": "RP1-P1-06B", "01085166": "RP1-P1-06B", "1085166": "RP1-P1-06B", "BLL_01081199": "RP1-P1-07", "01081199": "RP1-P1-07", "1081199": "RP1-P1-07", "BLL_01096712": "RP1-P1-07B", "01096712": "RP1-P1-07B", "1096712": "RP1-P1-07B", "BLL_01081200": "RP1-P1-08", "01081200": "RP1-P1-08", "1081200": "RP1-P1-08", "BLL_01096713": "RP1-P1-08B", "01096713": "RP1-P1-08B", "1096713": "RP1-P1-08B", "BLL_01081201": "RP1-P1-09", "01081201": "RP1-P1-09", "1081201": "RP1-P1-09", "BLL_01096714": "RP1-P1-09B", "01096714": "RP1-P1-09B", "1096714": "RP1-P1-09B", "BLL_01112338": "RP1-P2-01", "01112338": "RP1-P2-01", "1112338": "RP1-P2-01", "BLL_01112356": "RP1-P2-01B", "01112356": "RP1-P2-01B", "1112356": "RP1-P2-01B", "BLL_01112340": "RP1-P2-02", "01112340": "RP1-P2-02", "1112340": "RP1-P2-02", "BLL_01112341": "RP1-P2-02B", "01112341": "RP1-P2-02B", "1112341": "RP1-P2-02B", "BLL_01112342": "RP1-P2-03", "01112342": "RP1-P2-03", "1112342": "RP1-P2-03", "BLL_01112343": "RP1-P2-03B", "01112343": "RP1-P2-03B", "1112343": "RP1-P2-03B", "BLL_01112344": "RP1-P2-04", "01112344": "RP1-P2-04", "1112344": "RP1-P2-04", "BLL_01112345": "RP1-P2-04B", "01112345": "RP1-P2-04B", "1112345": "RP1-P2-04B", "BLL_01112346": "RP1-P2-05", "01112346": "RP1-P2-05", "1112346": "RP1-P2-05", "BLL_01112347": "RP1-P2-05B", "01112347": "RP1-P2-05B", "1112347": "RP1-P2-05B", "BLL_01112348": "RP1-P2-06", "01112348": "RP1-P2-06", "1112348": "RP1-P2-06", "BLL_01112349": "RP1-P2-06B", "01112349": "RP1-P2-06B", "1112349": "RP1-P2-06B", "BLL_01112350": "RP1-P2-07", "01112350": "RP1-P2-07", "1112350": "RP1-P2-07", "BLL_01112351": "RP1-P2-07B", "01112351": "RP1-P2-07B", "1112351": "RP1-P2-07B", "BLL_01112352": "RP1-P2-08", "01112352": "RP1-P2-08", "1112352": "RP1-P2-08", "BLL_01112353": "RP1-P2-08B", "01112353": "RP1-P2-08B", "1112353": "RP1-P2-08B", "BLL_01112354": "RP1-P2-09", "01112354": "RP1-P2-09", "1112354": "RP1-P2-09", "BLL_01112355": "RP1-P2-09B", "01112355": "RP1-P2-09B", "1112355": "RP1-P2-09B", "BLL_01101346": "RP2-P0-01", "01101346": "RP2-P0-01", "1101346": "RP2-P0-01", "BLL_01101347": "RP2-P0-01B", "01101347": "RP2-P0-01B", "1101347": "RP2-P0-01B", "BLL_01101348": "RP2-P0-02", "01101348": "RP2-P0-02", "1101348": "RP2-P0-02", "BLL_01101349": "RP2-P0-02B", "01101349": "RP2-P0-02B", "1101349": "RP2-P0-02B", "BLL_01101350": "RP2-P0-03", "01101350": "RP2-P0-03", "1101350": "RP2-P0-03", "BLL_01101351": "RP2-P0-03B", "01101351": "RP2-P0-03B", "1101351": "RP2-P0-03B", "BLL_01101352": "RP2-P0-04", "01101352": "RP2-P0-04", "1101352": "RP2-P0-04", "BLL_01101353": "RP2-P0-04B", "01101353": "RP2-P0-04B", "1101353": "RP2-P0-04B", "BLL_01101354": "RP2-P0-05", "01101354": "RP2-P0-05", "1101354": "RP2-P0-05", "BLL_01101355": "RP2-P0-05B", "01101355": "RP2-P0-05B", "1101355": "RP2-P0-05B", "BLL_01101356": "RP2-P0-06", "01101356": "RP2-P0-06", "1101356": "RP2-P0-06", "BLL_01101357": "RP2-P0-06B", "01101357": "RP2-P0-06B", "1101357": "RP2-P0-06B", "BLL_01152808": "RP2-P0-07", "01152808": "RP2-P0-07", "1152808": "RP2-P0-07", "BLL_01152809": "RP2-P0-07B", "01152809": "RP2-P0-07B", "1152809": "RP2-P0-07B", "BLL_01152810": "RP2-P0-08", "01152810": "RP2-P0-08", "1152810": "RP2-P0-08", "BLL_01152811": "RP2-P0-08B", "01152811": "RP2-P0-08B", "1152811": "RP2-P0-08B", "BLL_01152812": "RP2-P0-09", "01152812": "RP2-P0-09", "1152812": "RP2-P0-09", "BLL_01152813": "RP2-P0-09B", "01152813": "RP2-P0-09B", "1152813": "RP2-P0-09B", "BLL_01101358": "RP2-P1-01", "01101358": "RP2-P1-01", "1101358": "RP2-P1-01", "BLL_01101359": "RP2-P1-01B", "01101359": "RP2-P1-01B", "1101359": "RP2-P1-01B", "BLL_01101360": "RP2-P1-02", "01101360": "RP2-P1-02", "1101360": "RP2-P1-02", "BLL_01101361": "RP2-P1-02B", "01101361": "RP2-P1-02B", "1101361": "RP2-P1-02B", "BLL_01101362": "RP2-P1-03", "01101362": "RP2-P1-03", "1101362": "RP2-P1-03", "BLL_01101363": "RP2-P1-03B", "01101363": "RP2-P1-03B", "1101363": "RP2-P1-03B", "BLL_01112428": "RP2-P1-04", "01112428": "RP2-P1-04", "1112428": "RP2-P1-04", "BLL_01112429": "RP2-P1-04B", "01112429": "RP2-P1-04B", "1112429": "RP2-P1-04B", "BLL_01112430": "RP2-P1-05", "01112430": "RP2-P1-05", "1112430": "RP2-P1-05", "BLL_01112431": "RP2-P1-05B", "01112431": "RP2-P1-05B", "1112431": "RP2-P1-05B", "BLL_01112432": "RP2-P1-06", "01112432": "RP2-P1-06", "1112432": "RP2-P1-06", "BLL_01112433": "RP2-P1-06B", "01112433": "RP2-P1-06B", "1112433": "RP2-P1-06B", "BLL_01152800": "RP2-P1-07", "01152800": "RP2-P1-07", "1152800": "RP2-P1-07", "BLL_01152801": "RP2-P1-07B", "01152801": "RP2-P1-07B", "1152801": "RP2-P1-07B", "BLL_01152802": "RP2-P1-08", "01152802": "RP2-P1-08", "1152802": "RP2-P1-08", "BLL_01152803": "RP2-P1-08B", "01152803": "RP2-P1-08B", "1152803": "RP2-P1-08B", "BLL_01152804": "RP2-P1-09", "01152804": "RP2-P1-09", "1152804": "RP2-P1-09", "BLL_01152805": "RP2-P1-09B", "01152805": "RP2-P1-09B", "1152805": "RP2-P1-09B", "BLL_01112359": "RP2-P2-01", "01112359": "RP2-P2-01", "1112359": "RP2-P2-01", "BLL_01112360": "RP2-P2-01B", "01112360": "RP2-P2-01B", "1112360": "RP2-P2-01B", "BLL_01112361": "RP2-P2-02", "01112361": "RP2-P2-02", "1112361": "RP2-P2-02", "BLL_01112362": "RP2-P2-02B", "01112362": "RP2-P2-02B", "1112362": "RP2-P2-02B", "BLL_01112363": "RP2-P2-03", "01112363": "RP2-P2-03", "1112363": "RP2-P2-03", "BLL_01112364": "RP2-P2-03B", "01112364": "RP2-P2-03B", "1112364": "RP2-P2-03B", "BLL_01112365": "RP2-P2-04", "01112365": "RP2-P2-04", "1112365": "RP2-P2-04", "BLL_01112366": "RP2-P2-04B", "01112366": "RP2-P2-04B", "1112366": "RP2-P2-04B", "BLL_01112367": "RP2-P2-05", "01112367": "RP2-P2-05", "1112367": "RP2-P2-05", "BLL_01112368": "RP2-P2-05B", "01112368": "RP2-P2-05B", "1112368": "RP2-P2-05B", "BLL_01112369": "RP2-P2-06", "01112369": "RP2-P2-06", "1112369": "RP2-P2-06", "BLL_01112370": "RP2-P2-06B", "01112370": "RP2-P2-06B", "1112370": "RP2-P2-06B", "BLL_01112371": "RP2-P2-07", "01112371": "RP2-P2-07", "1112371": "RP2-P2-07", "BLL_01112372": "RP2-P2-07B", "01112372": "RP2-P2-07B", "1112372": "RP2-P2-07B", "BLL_01112373": "RP2-P2-08", "01112373": "RP2-P2-08", "1112373": "RP2-P2-08", "BLL_01112374": "RP2-P2-08B", "01112374": "RP2-P2-08B", "1112374": "RP2-P2-08B", "BLL_01112375": "RP2-P2-09", "01112375": "RP2-P2-09", "1112375": "RP2-P2-09", "BLL_01112376": "RP2-P2-09B", "01112376": "RP2-P2-09B", "1112376": "RP2-P2-09B", "BLL_00808384": "Zwroty", "00808384": "Zwroty", "808384": "Zwroty"};
+
+  function resolveLocation(scanned) {
+    const code = scanned.trim();
+    const upper = code.toUpperCase();
+    // Szukaj case-insensitive: oryginalny, uppercase, z prefixem BLL_
+    return LOCATION_MAP[code]
+      || LOCATION_MAP[upper]
+      || LOCATION_MAP['BLL_' + code]
+      || LOCATION_MAP['BLL_' + upper]
+      || code;
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function loadCfg() {
+    try {
+      const s = localStorage.getItem('bl_loc_v3');
+      if (s) cfg = { ...cfg, ...JSON.parse(s) };
+    } catch(e) {}
+    $('api-key-in').value = cfg.apiKey || '';
+    $('storage-id-in').value = cfg.inventoryId || '';
+    $('warehouse-id-in').value = cfg.warehouseId || '107563';
+    $('mode-sel').value = cfg.mode || 'live';
+    $('backend-sel').value = cfg.backend || 'BASELINKER';
+    $('tg-token-in').value = cfg.treegooToken || '';
+    toggleBackendFields(cfg.backend || 'BASELINKER');
+    updateStatus();
+  }
+
+  function toggleBackendFields(backend) {
+    $('bl-fields').classList.toggle('hidden', backend === 'TREEGOO');
+    $('tg-fields').classList.toggle('hidden', backend !== 'TREEGOO');
+  }
+
+  function saveSettings() {
+    cfg.backend = $('backend-sel').value;
+    cfg.apiKey = $('api-key-in').value.trim();
+    cfg.inventoryId = $('storage-id-in').value.trim();
+    cfg.warehouseId = $('warehouse-id-in').value.trim() || '107563';
+    cfg.treegooToken = $('tg-token-in').value.trim();
+    cfg.mode = $('mode-sel').value;
+    try { localStorage.setItem('bl_loc_v3', JSON.stringify(cfg)); } catch(e) {}
+    updateStatus();
+    toggleSettings();
+  }
+
+  function updateStatus() {
+    const dot = $('conn-dot');
+    const lbl = $('conn-label');
+    if (cfg.mode === 'demo') {
+      dot.className = 'status-dot';
+      lbl.textContent = 'Tryb demo';
+    } else if (cfg.backend === 'TREEGOO') {
+      if (cfg.treegooToken) {
+        dot.className = 'status-dot ok';
+        lbl.textContent = 'Treegoo · Produkcyjny';
+      } else {
+        dot.className = 'status-dot err';
+        lbl.textContent = 'Treegoo · Brak tokena';
+      }
+    } else {
+      if (cfg.apiKey) {
+        dot.className = 'status-dot ok';
+        lbl.textContent = 'BaseLinker · ' + cfg.warehouseId;
+      } else {
+        dot.className = 'status-dot err';
+        lbl.textContent = 'BaseLinker · Brak klucza API';
+      }
+    }
+  }
+
+  function toggleSettings() {
+    settingsOpen = !settingsOpen;
+    $('main-screen').classList.toggle('hidden', settingsOpen);
+    $('settings-screen').classList.toggle('hidden', !settingsOpen);
+    if (!settingsOpen) focusTrap();
+  }
+
+  const ICONS = {
+    [STATES.PRODUCT]: 'ti-barcode',
+    [STATES.LOCATION]: 'ti-map-pin',
+    [STATES.SAVING]: 'ti-loader-2',
+    [STATES.SUCCESS]: 'ti-circle-check',
+    [STATES.ERROR]: 'ti-alert-circle',
+  };
+  const ICON_COLORS = {
+    [STATES.PRODUCT]: 'blue',
+    [STATES.LOCATION]: 'blue',
+    [STATES.SAVING]: 'blue',
+    [STATES.SUCCESS]: 'green',
+    [STATES.ERROR]: 'red',
+  };
+
+  function renderState(s, product, location, errorMsg) {
+    const icon = $('state-icon');
+    icon.className = 'ti ' + ICONS[s] + ' state-icon ' + ICON_COLORS[s];
+    if (s === STATES.SAVING) icon.classList.add('spinning');
+
+    $('product-box').classList.add('hidden');
+    $('loc-badge').classList.add('hidden');
+
+    if (s === STATES.PRODUCT) {
+      $('state-step').textContent = 'Krok 1 z 2';
+      $('state-instr').textContent = 'Zeskanuj produkt';
+      $('state-sub').textContent = 'Przyłóż skaner do kodu EAN produktu';
+    } else if (s === STATES.LOCATION) {
+      $('state-step').textContent = 'Krok 2 z 2';
+      $('state-instr').textContent = 'Zeskanuj lokalizację';
+      $('state-sub').textContent = location
+        ? `Zeskanowane: ${location} — skanuj kolejne lub czekaj 10s`
+        : 'Przyłóż skaner do kodu na regale (możesz skanować wiele)';
+      if (product) {
+        $('p-name').textContent = product.name || ('ID: ' + product.id);
+        $('p-sku').textContent = product.sku ? 'SKU: ' + product.sku : 'ID: ' + product.id;
+        $('product-box').classList.remove('hidden');
+      }
+      if (location) {
+        $('loc-badge').textContent = location;
+        $('loc-badge').classList.remove('hidden');
+      }
+    } else if (s === STATES.SAVING) {
+      $('state-step').textContent = 'Zapisywanie...';
+      $('state-instr').textContent = 'Trwa zapis do BaseLinker';
+      $('state-sub').textContent = '';
+      if (product) {
+        $('p-name').textContent = product.name || ('ID: ' + product.id);
+        $('p-sku').textContent = product.sku ? 'SKU: ' + product.sku : 'ID: ' + product.id;
+        $('product-box').classList.remove('hidden');
+      }
+      if (location) {
+        $('loc-badge').textContent = location;
+        $('loc-badge').classList.remove('hidden');
+      }
+    } else if (s === STATES.SUCCESS) {
+      $('state-step').textContent = 'Zapisano!';
+      $('state-instr').textContent = product ? (product.name || product.id) : '';
+      $('state-sub').textContent = '';
+      if (location) {
+        $('loc-badge').textContent = location;
+        $('loc-badge').classList.remove('hidden');
+      }
+    } else if (s === STATES.ERROR) {
+      $('state-step').textContent = 'Błąd zapisu';
+      $('state-instr').textContent = errorMsg || 'Nie znaleziono produktu';
+      $('state-sub').textContent = 'Sprawdź ustawienia i spróbuj ponownie';
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── Dźwięki ───────────────────────────────────────────────────────────────
+  const _ac = new (window.AudioContext || window.webkitAudioContext)();
+
+  function beep(freq, duration, type = 'sine', vol = 0.4) {
+    const osc = _ac.createOscillator();
+    const gain = _ac.createGain();
+    osc.connect(gain);
+    gain.connect(_ac.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, _ac.currentTime);
+    gain.gain.setValueAtTime(vol, _ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, _ac.currentTime + duration);
+    osc.start(_ac.currentTime);
+    osc.stop(_ac.currentTime + duration);
+  }
+
+  function soundProductFound() {
+    // Krótki wysoki pip — produkt znaleziony
+    beep(1200, 0.08, 'sine', 0.35);
+  }
+
+  function soundLocationScanned() {
+    // Krótkie kliknięcie — lokalizacja dodana do listy
+    beep(800, 0.05, 'square', 0.2);
+  }
+
+  function soundSaved() {
+    // Dwa beeepy w górę — zapisano do BaseLinker
+    beep(900, 0.1, 'sine', 0.4);
+    setTimeout(() => beep(1400, 0.15, 'sine', 0.4), 130);
+  }
+
+  function soundError() {
+    // Niski długi beep — błąd
+    beep(220, 0.4, 'sawtooth', 0.35);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async function lookupProduct(code, opts) {
+    return applyOverlay(await getBackend().lookupProduct(code, opts));
+  }
+
+  // ══ OUTBOX: kolejka wysyłki do bazy (przeżywa odświeżenie strony) ═══════════
+  const OUTBOX_KEY = 'bl_outbox_v1', SESSION_KEY = 'bl_session_v1';
+  const MAX_TRIES = 6, BACKOFF = [2000, 5000, 10000, 20000, 30000];
+  let outbox = [];          // zadania: pending | sending | failed
+  let sessionLog = {};      // productId -> ostatnio wysłana lista (do "Sprawdź sesję")
+  let recentSent = {};      // productId -> { locs, ts } — krótki overlay po wysyłce
+  let sessionVerified = true;
+  let workerRunning = false;
+
+  function sameLocs(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    const n = x => [...new Set(x.map(s => String(s).trim().toUpperCase()).filter(Boolean))].sort().join('|');
+    return n(a) === n(b);
+  }
+  function currentModeKey() { return cfg.mode === 'demo' ? 'DEMO' : cfg.backend; }
+  function backendFor(mode) {
+    if (mode === 'DEMO') return DemoBackend;
+    if (mode === 'TREEGOO') return TreegooBackend;
+    return BaseLinkerBackend;
+  }
+  function loadOutbox() {
+    try { outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch(e) { outbox = []; }
+    try { sessionLog = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch(e) { sessionLog = {}; }
+    outbox.forEach(j => { if (j.status === 'sending') j.status = 'pending'; j.nextAt = 0; });
+    sessionVerified = Object.keys(sessionLog).length === 0;
+  }
+  function persistOutbox() {
+    try {
+      localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionLog));
+    } catch(e) {}
+  }
+  function applyOverlay(product) {
+    if (!product) return product;
+    const mode = currentModeKey();
+    const job = [...outbox].reverse().find(j => (j.type || 'loc') === 'loc' && String(j.productId) === String(product.id) && j.mode === mode);
+    if (job) { product.existingLocs = [...job.locs]; return product; }
+    const r = recentSent[String(product.id)];
+    if (r && Date.now() - r.ts < 120000) product.existingLocs = [...r.locs];
+    return product;
+  }
+  function enqueueSave(product, locs, modeOverride) {
+    const mode = modeOverride || currentModeKey();
+    // Nowa lista zastępuje starą, jeszcze niewysłaną (zapis pełną listą = idempotentny)
+    outbox = outbox.filter(j => !((j.type || 'loc') === 'loc' && String(j.productId) === String(product.id) && j.mode === mode && j.status !== 'sending'));
+    const job = {
+      id: 'j' + Date.now() + Math.random().toString(36).slice(2, 6),
+      type: 'loc', productId: product.id, name: product.name || '', sku: product.sku || '',
+      locs: [...locs], mode, status: 'pending', tries: 0, nextAt: 0, error: '', ts: Date.now()
+    };
+    outbox.push(job);
+    persistOutbox(); updateCounters(); renderOutbox();
+    kickWorker();
+    return job;
+  }
+  function enqueueStock(product, stock, modeOverride) {
+    const mode = modeOverride || currentModeKey();
+    outbox = outbox.filter(j => !(j.type === 'stock' && String(j.productId) === String(product.id) && j.mode === mode && j.status !== 'sending'));
+    const job = {
+      id: 'j' + Date.now() + Math.random().toString(36).slice(2, 6),
+      type: 'stock', productId: product.id, name: product.name || '', sku: product.sku || '',
+      stock: parseInt(stock), locs: [], mode, status: 'pending', tries: 0, nextAt: 0, error: '', ts: Date.now()
+    };
+    outbox.push(job);
+    persistOutbox(); updateCounters(); renderOutbox();
+    kickWorker();
+    return job;
+  }
+  function kickWorker() { if (!workerRunning) workerLoop(); }
+
+  async function workerLoop() {
+    if (workerRunning) return;
+    workerRunning = true;
+    try {
+      while (true) {
+        const now = Date.now();
+        const job = outbox.find(j => j.status === 'pending' && j.nextAt <= now);
+        if (!job) {
+          const waiting = outbox.filter(j => j.status === 'pending');
+          if (!waiting.length) break;
+          await delay(Math.max(300, Math.min(...waiting.map(j => j.nextAt)) - now));
+          continue;
+        }
+        job.status = 'sending'; renderOutbox(); updateCounters();
+        const be = backendFor(job.mode);
+        let res;
+        try { res = job.type === 'stock' ? await be.saveStock(job.productId, job.stock) : await be.saveLocation(job.productId, job.locs); }
+        catch (e) { res = { ok: false, error: 'Brak połączenia: ' + (e.message || e) }; }
+
+        // SUCCESS z ostrzeżeniami ≠ pewny zapis → odczytaj i porównaj
+        if (res.ok && res.warnings) {
+          try {
+            if (job.type === 'stock') {
+              const got = await be.readState([job.productId]);
+              if (!got[job.productId] || got[job.productId].stock !== job.stock) {
+                res = { ok: false, error: 'Base zwrócił ostrzeżenie i stan się nie zapisał: ' + res.warnings };
+              }
+            } else {
+              const got = await be.readLocations([job.productId]);
+              if (!sameLocs(got[job.productId], job.locs)) {
+                res = { ok: false, error: 'Base zwrócił ostrzeżenie i lokalizacja się nie zapisała: ' + res.warnings };
+              }
+            }
+          } catch (e) { res = { ok: false, error: 'Nie udało się potwierdzić zapisu (ostrzeżenie Base)' }; }
+        }
+
+        if (res.ok) {
+          outbox = outbox.filter(j => j.id !== job.id);
+          if (job.type !== 'stock') cntDone++;
+          if (job.type !== 'stock') recentSent[String(job.productId)] = { locs: [...job.locs], ts: Date.now() };
+          if (job.type !== 'stock' && job.mode !== 'DEMO') {
+            sessionLog[String(job.productId)] = { name: job.name, sku: job.sku, locs: [...job.locs], mode: job.mode, ts: Date.now() };
+            sessionVerified = false;
+          }
+        } else {
+          job.tries++;
+          job.error = res.error || 'Błąd zapisu';
+          if (job.tries >= MAX_TRIES) { job.status = 'failed'; soundError(); }
+          else { job.status = 'pending'; job.nextAt = Date.now() + BACKOFF[Math.min(job.tries - 1, BACKOFF.length - 1)]; }
+        }
+        persistOutbox(); updateCounters(); renderOutbox(); renderHistory();
+        await delay(1000);   // odstęp między zapisami (limit API)
+      }
+    } finally { workerRunning = false; }
+  }
+
+  function retryJob(id) {
+    const j = outbox.find(x => x.id === id);
+    if (!j) return;
+    j.status = 'pending'; j.tries = 0; j.nextAt = 0; j.error = '';
+    persistOutbox(); updateCounters(); renderOutbox(); kickWorker(); refocus();
+  }
+  function retryAll() {
+    outbox.filter(j => j.status === 'failed').forEach(j => { j.status = 'pending'; j.tries = 0; j.nextAt = 0; j.error = ''; });
+    // pending w oczekiwaniu na backoff — ponów od razu
+    outbox.filter(j => j.status === 'pending').forEach(j => { j.nextAt = 0; });
+    persistOutbox(); updateCounters(); renderOutbox(); kickWorker(); refocus();
+  }
+  function discardJob(id) {
+    const j = outbox.find(x => x.id === id);
+    if (!j) return;
+    if (!confirm('Odrzucić niewysłaną lokalizację dla: ' + (j.name || j.productId) + '?\nProdukt zostanie bez nowej lokalizacji w bazie.')) return;
+    outbox = outbox.filter(x => x.id !== id);
+    persistOutbox(); updateCounters(); renderOutbox(); renderHistory(); refocus();
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function updateCounters() {
+    const q = outbox.filter(j => j.status !== 'failed').length;
+    const failed = outbox.filter(j => j.status === 'failed').length;
+    $('cnt-done').textContent = cntDone;
+    $('cnt-q').textContent = q;
+    $('cnt-err').textContent = cntErr + failed;
+    $('cnt-q-card').classList.toggle('queue-active', q > 0);
+    $('cnt-err-card').classList.toggle('err-active', failed > 0);
+    $('verify-btn').classList.toggle('hidden', Object.keys(sessionLog).length === 0);
+  }
+
+  function renderOutbox() {
+    const show = outbox.filter(j => j.status === 'failed' || (j.status === 'pending' && j.tries > 0) || (j.status === 'sending' && j.tries > 0));
+    $('outbox-wrap').classList.toggle('hidden', show.length === 0);
+    $('outbox-list').innerHTML = show.map(j => {
+      const failed = j.status === 'failed';
+      return `<div class="outbox-item ${failed ? '' : 'retrying'}">
+        <div class="ob-main">
+          <div class="ob-name">${failed ? '✕' : '⟳'} ${j.type === 'stock' ? '[stan] ' : ''}${esc(j.name || j.productId)}</div>
+          <div class="ob-sub">${j.type === 'stock' ? 'stan → ' + esc(j.stock) : esc(j.locs.join(', ') || '(usunięto lokalizacje)')} — ${failed ? 'nie wysłano' : 'ponawiam (' + j.tries + '/' + MAX_TRIES + ')'}: ${esc(j.error)}</div>
+        </div>
+        ${failed ? `<button class="ob-btn" onclick="retryJob('${j.id}')">Ponów</button><button class="ob-btn" onclick="discardJob('${j.id}')">✕</button>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Weryfikacja końca sesji: czy to, co wysłaliśmy, naprawdę jest w bazie ──
+  async function verifySession() {
+    const box = $('verify-box');
+    box.classList.remove('hidden');
+    box.innerHTML = 'Czekam na opróżnienie kolejki…';
+    while (outbox.some(j => j.status === 'pending' || j.status === 'sending')) await delay(500);
+    const entries = Object.entries(sessionLog);
+    if (!entries.length) { box.innerHTML = 'Brak zapisanych produktów do sprawdzenia.'; return; }
+    box.innerHTML = `Sprawdzam ${entries.length} produktów w bazie…`;
+    const bad = [];       // { id, entry, got }
+    let ok = 0, unknown = 0, failedRead = 0;
+    const byMode = {};
+    entries.forEach(([id, e]) => { (byMode[e.mode] = byMode[e.mode] || []).push(id); });
+    for (const mode of Object.keys(byMode)) {
+      try {
+        const got = await backendFor(mode).readLocations(byMode[mode]);
+        for (const id of byMode[mode]) {
+          const e = sessionLog[id];
+          if (got[id] === undefined) { unknown++; continue; }
+          if (sameLocs(got[id], e.locs)) ok++; else bad.push({ id, e, got: got[id] });
+        }
+      } catch (err) {
+        failedRead += byMode[mode].length;
+        box.innerHTML = 'Błąd odczytu z bazy: ' + esc(err.message || err);
+      }
+    }
+    if (failedRead) { box.innerHTML += '<br>Spróbuj ponownie za chwilę.'; return; }
+    sessionVerified = bad.length === 0;
+    window._verifyBad = bad;
+    let html = `<div><span class="v-ok">✓ ${ok} zgodnych</span>` +
+      (bad.length ? ` · <span class="v-bad">✕ ${bad.length} niezgodnych</span>` : '') +
+      (unknown ? ` · ${unknown} nie odnaleziono` : '') + '</div>';
+    bad.forEach((b, i) => {
+      html += `<div class="verify-row"><div style="min-width:0"><div class="ob-name">${esc(b.e.name || b.id)}</div>
+        <div class="ob-sub">wysłano: ${esc(b.e.locs.join(', ') || '—')} · w bazie: ${esc(b.got.join(', ') || '—')}</div></div>
+        <button class="ob-btn" onclick="resendVerifyBad(${i})">Zapisz ponownie</button></div>`;
+    });
+    if (bad.length > 1) html += `<div style="margin-top:8px"><button class="ob-btn" onclick="resendVerifyBad(-1)">Zapisz ponownie wszystkie</button></div>`;
+    box.innerHTML = html;
+    persistOutbox();
+  }
+  function resendVerifyBad(i) {
+    const list = window._verifyBad || [];
+    const items = i === -1 ? list : [list[i]].filter(Boolean);
+    items.forEach(b => {
+      enqueueSave({ id: b.id, name: b.e.name, sku: b.e.sku }, b.e.locs, b.e.mode);
+    });
+    $('verify-box').innerHTML = `Wysłano ponownie: ${items.length}. Po zakończeniu kolejki kliknij „Sprawdź sesję w bazie" jeszcze raz.`;
+    refocus();
+  }
+
+  window.addEventListener('beforeunload', function(e) {
+    const unsavedScan = currentProduct && (pendingLocations.length || existingLocs.length < originalLocs.length);
+    if (outbox.length || unsavedScan || invQueue.length) {
+      e.preventDefault();
+      e.returnValue = 'Są niewysłane lokalizacje — wyjście je utraci.';
+      return e.returnValue;
+    }
+  });
+  window.addEventListener('online', kickWorker);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) kickWorker(); });
+  // ═════════════════════════════════════════════════════════════════════════
+
+  async function saveLocation(productId, loc) {
+    // loc może być string (semicolon-separated) albo array — normalizujemy do array
+    const locations = Array.isArray(loc)
+      ? loc
+      : loc.split(';').map(l => l.trim()).filter(Boolean);
+    return await getBackend().saveLocation(productId, locations);
+  }
+
+
+  // ══ INWENTARYZACJA ═══════════════════════════════════════════════════════
+  const INV_KEY = 'bl_inv_v1';
+  let appMode = 'NORM';
+  let inv = null;          // sesja liczenia (persist w localStorage)
+  let invReport = null;    // raport (tylko w pamięci)
+  let invQueue = [], invBusy = false;
+  let invMsg = null, invMsgTimer = null;
+
+  let wakeLock = null;
+  async function invWake() {
+    try {
+      if (navigator.wakeLock && !wakeLock && document.visibilityState === 'visible') {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch(e) {}
+  }
+  function invWakeOff() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch(e) {} }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && (screenLocked || (appMode === 'INV' && inv && inv.active))) invWake(); });
+
+  function invLoad() { try { inv = JSON.parse(localStorage.getItem(INV_KEY) || 'null'); } catch(e) { inv = null; } }
+  function invSave() { try { if (inv) localStorage.setItem(INV_KEY, JSON.stringify(inv)); else localStorage.removeItem(INV_KEY); } catch(e) {} }
+  function reportOpen() { return appMode === 'INV' && !!inv && inv.active && inv.stage === 'report'; }
+  function invTotal(e) { return Object.values(e.byLoc).reduce((a, b) => a + b, 0); }
+
+  function setMode(m) {
+    if (m === appMode) return;
+    if (m !== 'NORM' && currentProduct) {
+      if (!confirm('Anulować bieżący produkt i zmienić tryb?')) return;
+      cancelProduct();
+    }
+    if (appMode === 'MOVE') mvReset();
+    appMode = m;
+    $('main-screen').classList.toggle('mode-inv', m !== 'NORM');
+    $('mode-norm').classList.toggle('active', m === 'NORM');
+    $('mode-inv').classList.toggle('active', m === 'INV');
+    $('mode-move').classList.toggle('active', m === 'MOVE');
+    $('inv-panel').classList.toggle('hidden', m !== 'INV');
+    $('move-panel').classList.toggle('hidden', m !== 'MOVE');
+    try { localStorage.setItem('bl_mode', m); } catch(e) {}
+    if (m === 'INV') { invRender(); if (inv && inv.active) invWake(); }
+    else if (!screenLocked) { invWakeOff(); }
+    if (m === 'MOVE') mvRender();
+    refocus();
+  }
+
+  function invFlash(text, err) {
+    invMsg = { text, err: !!err };
+    clearTimeout(invMsgTimer);
+    invMsgTimer = setTimeout(() => { invMsg = null; invRender(); }, 3500);
+    invRender();
+  }
+
+  function invStart() {
+    inv = { active: true, stage: 'count', startedAt: Date.now(), modeKey: currentModeKey(),
+            curLoc: null, visited: [], counts: {}, codeMap: {}, unknown: {}, applied: {}, pending: [], scansSinceBackup: 0, lastBackup: null };
+    invReport = null; invSave(); invRender(); invWake();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+    refocus();
+  }
+
+  function invEnqueueScan(code) {
+    invQueue.push(code);
+    if (inv && inv.active) { (inv.pending = inv.pending || []).push(code); invSave(); }
+    if (!invBusy) invProcess();
+  }
+  async function invProcess() {
+    invBusy = true;
+    try {
+      while (invQueue.length) {
+        const c = invQueue.shift();
+        try { await invScan(c); } catch (e) { invFlash('Błąd: ' + (e.message || e), true); soundError(); }
+        if (inv && inv.pending && inv.pending.length) { inv.pending.shift(); invSave(); }
+      }
+    } finally { invBusy = false; }
+  }
+
+  function invNewLocs(e) {
+    const counted = Object.keys(e.byLoc).filter(l => e.byLoc[l] > 0);
+    if (!counted.length) return [...e.baseLocs];
+    const kept = e.baseLocs.filter(l => !inv.visited.includes(l));   // lokalizacje nieodwiedzone zostają
+    return [...new Set([...kept, ...counted])];
+  }
+  function invSync(id) {
+    const e = inv.counts[id];
+    const locs = invNewLocs(e);
+    if (e.sentLocs ? !sameLocs(e.sentLocs, locs) : !sameLocs(e.baseLocs, locs)) {
+      e.sentLocs = locs;
+      enqueueSave({ id, name: e.name, sku: e.sku }, locs, inv.modeKey);
+    } else if (!e.sentLocs) {
+      e.sentLocs = locs;   // już zgodne z bazą — nic do wysłania
+    }
+  }
+  function invAfterChange(id) { invSync(id); invSave(); invRender(); }
+
+  async function invScan(code) {
+    if (!inv || !inv.active || inv.stage !== 'count') return;
+    const resolved = resolveLocation(code);
+    const known = Object.values(LOCATION_MAP).includes(resolved) ||
+      Object.keys(LOCATION_MAP).some(k => k.toUpperCase() === code.trim().toUpperCase());
+    if (known) {
+      inv.curLoc = resolved; inv.lastId = null;
+      if (!inv.visited.includes(resolved)) inv.visited.push(resolved);
+      soundLocationScanned(); invSave(); invRender();
+      return;
+    }
+    if (/^BLL_/i.test(code)) { invFlash('Nieznana lokalizacja: ' + code, true); soundError(); return; }
+    if (!inv.curLoc) { invFlash('Najpierw zeskanuj lokalizację', true); soundError(); return; }
+
+    const key = code.toUpperCase();
+    let id = inv.codeMap[key];
+    if (!id) {
+      let product = null;
+      try { product = await lookupProduct(code, { withLocs: true }); }
+      catch (e) { invFlash('Błąd połączenia: ' + (e.message || e) + ' — zeskanuj ponownie', true); soundError(); return; }
+      if (!product) {
+        inv.unknown[code] = (inv.unknown[code] || 0) + 1;
+        invSave(); invFlash('Nie znaleziono produktu: ' + code, true); soundError();
+        return;
+      }
+      id = String(product.id);
+      inv.codeMap[key] = id;
+      if (!inv.counts[id]) {
+        inv.counts[id] = { name: product.name || '', sku: product.sku || '', stock: product.stock || 0,
+                           baseLocs: [...(product.existingLocs || [])], byLoc: {}, sentLocs: null, ts: 0 };
+      }
+    }
+    const e = inv.counts[id];
+    inv.lastId = id;
+    e.byLoc[inv.curLoc] = (e.byLoc[inv.curLoc] || 0) + 1;
+    e.ts = Date.now();
+    soundProductFound();
+    invAfterChange(id);
+    inv.scansSinceBackup = (inv.scansSinceBackup || 0) + 1;
+    if (inv.scansSinceBackup >= 150) invBackup(true);
+  }
+
+  function invMinus(id) {
+    const e = inv && inv.counts[id];
+    if (e && inv.curLoc && e.byLoc[inv.curLoc] > 0) {
+      e.byLoc[inv.curLoc]--;
+      if (!e.byLoc[inv.curLoc]) delete e.byLoc[inv.curLoc];
+      invAfterChange(id);
+    }
+    refocus();
+  }
+  function invRemove(id) {
+    const e = inv && inv.counts[id];
+    if (e && inv.curLoc) { delete e.byLoc[inv.curLoc]; invAfterChange(id); }
+    refocus();
+  }
+  function invSetQty(id) {
+    const e = inv && inv.counts[id];
+    if (!e || !inv.curLoc) return;
+    const v = prompt('Ile sztuk tego produktu jest w lokalizacji ' + inv.curLoc + '?', e.byLoc[inv.curLoc] || 0);
+    if (v === null) { refocus(); return; }
+    const n = parseInt(v);
+    if (isNaN(n) || n < 0) { refocus(); return; }
+    if (n === 0) delete e.byLoc[inv.curLoc]; else e.byLoc[inv.curLoc] = n;
+    e.ts = Date.now();
+    invAfterChange(id);
+    refocus();
+  }
+  function invBackup(auto) {
+    if (!inv) return;
+    inv.scansSinceBackup = 0; inv.lastBackup = Date.now(); invSave();
+    downloadFile(`kopia-liczenia-${stamp()}.json`, JSON.stringify({ v: 1, savedAt: new Date().toISOString(), inv }), 'application/json');
+    if (!auto) invFlash('Kopia liczenia pobrana', false); else invRender();
+  }
+  function invQuickCsv() {
+    if (!inv) return;
+    const cell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const lines = [['Produkt', 'SKU', 'ID', 'Policzone', 'Zapisane lokalizacje'].map(cell).join(';')];
+    Object.keys(inv.counts).forEach(id => {
+      const e = inv.counts[id], t = invTotal(e);
+      if (t > 0) lines.push([e.name, e.sku, id, t, Object.keys(e.byLoc).join(', ')].map(cell).join(';'));
+    });
+    Object.keys(inv.unknown).forEach(c => lines.push(['NIEZNANY KOD', c, '', inv.unknown[c], ''].map(cell).join(';')));
+    downloadFile(`policzone-${stamp()}.csv`, '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+    refocus();
+  }
+  function invRestoreFile(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const d = JSON.parse(rd.result);
+        const x = d && d.inv;
+        if (!x || !x.counts || !Array.isArray(x.visited)) throw new Error('To nie jest kopia liczenia');
+        if (inv && inv.active && !confirm('Jest aktywna inwentaryzacja. Zastąpić ją wczytaną kopią?')) return;
+        inv = x; inv.active = true; inv.stage = 'count'; inv.pending = []; invReport = null;
+        Object.keys(inv.counts).forEach(id => { inv.counts[id].sentLocs = null; });
+        Object.keys(inv.counts).forEach(id => { if (invTotal(inv.counts[id]) > 0) invSync(id); });   // dosłanie lokalizacji, gdyby kolejka zginęła
+        invSave(); invRender(); invWake();
+        invFlash('Wczytano kopię: ' + Object.keys(inv.counts).length + ' produktów', false);
+      } catch (e) { alert('Nie udało się wczytać kopii: ' + (e.message || e)); }
+    };
+    rd.readAsText(f);
+    input.value = '';
+  }
+  function invCancel() {
+    if (!confirm('Anulować inwentaryzację? Policzone dane znikną. Lokalizacje już zapisane w bazie zostają.')) return;
+    inv = null; invReport = null; invSave(); invRender(); refocus();
+  }
+
+  function invRender() {
+    const p = $('inv-panel');
+    if (!p || appMode !== 'INV') return;
+    if (!inv || !inv.active) {
+      p.innerHTML = `<div class="inv-card"><div class="inv-title">Inwentaryzacja</div>
+        <div class="inv-sub">Skanuj lokalizację, potem produkty — każdy skan to +1 szt. Lokalizacje zapisują się na bieżąco, stany dopiero po raporcie i Twoim zatwierdzeniu.</div>
+        <button class="inv-btn primary" onclick="invStart()">Nowa inwentaryzacja</button>
+        <label class="inv-btn" style="text-align:center">Wczytaj kopię liczenia<input type="file" accept=".json,application/json" style="display:none" onchange="invRestoreFile(this)"></label></div>`;
+      return;
+    }
+    if (inv.stage === 'report') { reportRender(); return; }
+    const ids = Object.keys(inv.counts).filter(id => invTotal(inv.counts[id]) > 0);
+    const pieces = ids.reduce((a, id) => a + invTotal(inv.counts[id]), 0);
+    const here = (inv.lastId && inv.curLoc && inv.counts[inv.lastId] && inv.counts[inv.lastId].byLoc[inv.curLoc] > 0) ? [inv.lastId] : [];
+    const unk = Object.keys(inv.unknown).length;
+    const q = (v) => esc(JSON.stringify(v));
+    p.innerHTML = `
+      <div class="inv-card">
+        <div class="inv-loc ${inv.curLoc ? '' : 'none'}">${inv.curLoc ? esc(inv.curLoc) : 'Zeskanuj lokalizację'}</div>
+        <div class="inv-stats">
+          <span><b>${ids.length}</b> produktów</span><span><b>${pieces}</b> szt.</span>
+          <span><b>${inv.visited.length}</b> lokalizacji</span>${unk ? `<span class="bad"><b>${unk}</b> nieznanych</span>` : ''}
+        </div>
+        ${invMsg ? `<div class="inv-flash ${invMsg.err ? 'err' : ''}">${esc(invMsg.text)}</div>` : ''}
+      </div>
+      <div class="inv-list">
+        ${here.length ? here.map(id => {
+          const e = inv.counts[id];
+          return `<div class="inv-row">
+            <div class="inv-row-main">
+              <div class="inv-name">${esc(e.name || id)}</div>
+              <div class="inv-meta">${esc(e.sku || '')}</div>
+            </div>
+            <div class="inv-qty" onclick="invSetQty(${q(id)})" title="Ustaw ilość">×${e.byLoc[inv.curLoc]}</div>
+            <button class="ob-btn" onclick="invMinus(${q(id)})">−1</button>
+            <button class="ob-btn" onclick="invRemove(${q(id)})">✕</button>
+          </div>`;
+        }).join('') : `<div class="inv-empty">${inv.curLoc ? 'Zeskanuj produkt' : 'Najpierw zeskanuj kod lokalizacji na regale'}</div>`}
+      </div>
+      <div class="inv-actions">
+        <button class="inv-btn primary" onclick="invFinish()">Zakończ i pokaż raport</button>
+        <button class="inv-btn" onclick="invBackup(false)">Pobierz kopię liczenia (plik)</button>
+        <button class="inv-btn" onclick="invQuickCsv()">Pobierz policzone (CSV)</button>
+        <div class="inv-meta" style="text-align:center">${inv.lastBackup ? 'Ostatnia kopia: ' + new Date(inv.lastBackup).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) + ' · ' : 'Kopia pobiera się sama co 150 skanów · '}${150 - (inv.scansSinceBackup || 0)} skanów do następnej</div>
+        <button class="inv-btn" onclick="invCancel()">Anuluj inwentaryzację</button>
+      </div>`;
+  }
+
+  async function invFinish() {
+    if (!inv) return;
+    const n = Object.keys(inv.counts).filter(id => invTotal(inv.counts[id]) > 0).length;
+    if (!n && !confirm('Nic nie policzono. Przejść do raportu mimo to?')) return;
+    if (n && !confirm('Zakończyć liczenie i wygenerować raport?\nPotem nie skanujesz już nowych produktów w tej sesji (możesz wrócić do liczenia).')) return;
+    Object.keys(inv.counts).forEach(id => invSync(id));   // domknięcie lokalizacji (znamy już komplet odwiedzonych)
+    inv.stage = 'report'; invSave();
+    await reportBuild();
+  }
+  function invBackToCount() {
+    inv.stage = 'count'; invReport = null; invSave(); invRender(); refocus();
+  }
+  function invClose() {
+    if (!confirm('Zamknąć inwentaryzację? Raport i policzone dane zostaną usunięte z tego urządzenia.')) return;
+    inv = null; invReport = null; invSave(); invRender(); refocus();
+  }
+
+  // ── RAPORT ────────────────────────────────────────────────────────────────
+  async function reportBuild() {
+    const r = { rows: [], unknown: { ...inv.unknown }, filter: 'diff', q: '', sel: {}, msg: '', building: true,
+                applied: false, verify: null, note: '' };
+    invReport = r; invRender();
+    try {
+      r.msg = 'Czekam na zapis lokalizacji…'; invRender();
+      while (outbox.some(j => j.status === 'pending' || j.status === 'sending')) await delay(500);
+      const failedLocs = outbox.filter(j => j.status === 'failed' && (j.type || 'loc') === 'loc').length;
+      if (failedLocs) r.note = `Uwaga: ${failedLocs} lokalizacji nie zostało wysłanych (czerwona lista wyżej) — ponów je przed zatwierdzeniem.`;
+
+      const be = backendFor(inv.modeKey);
+      const countedIds = Object.keys(inv.counts).filter(id => invTotal(inv.counts[id]) > 0);
+      r.msg = 'Pobieram aktualne stany z bazy…'; invRender();
+      const st = countedIds.length ? await be.readState(countedIds, (a, b) => { r.msg = `Pobieram stany: ${a}/${b}`; invRender(); }) : {};
+
+      for (const id of countedIds) {
+        const e = inv.counts[id];
+        const total = invTotal(e);
+        const s = st[id];
+        const baseStock = s && s.stock != null ? s.stock : null;
+        const unv = e.baseLocs.filter(l => !inv.visited.includes(l));
+        const diff = baseStock == null ? null : total - baseStock;
+        const status = baseStock == null ? 'info' : (unv.length ? 'manual' : (diff === 0 ? 'ok' : 'diff'));
+        r.rows.push({ id, name: e.name, sku: e.sku, total, byLoc: { ...e.byLoc }, baseStock, diff,
+                      before: e.baseLocs, after: e.sentLocs || invNewLocs(e), scanned: Object.keys(e.byLoc), unv, status, newStock: total });
+      }
+
+      r.rows.forEach(x => { r.sel[x.id] = (x.status === 'diff'); });
+    } catch (e) {
+      r.note = 'Błąd generowania raportu: ' + (e.message || e);
+    }
+    r.building = false; r.msg = '';
+    invRender();
+  }
+
+  function reportCounts() {
+    const c = { all: 0, ok: 0, diff: 0, missing: 0, manual: 0, info: 0, unknown: Object.keys(invReport.unknown).length };
+    invReport.rows.forEach(x => { c.all++; c[x.status]++; });
+    return c;
+  }
+  function reportSetFilter(f) { invReport.filter = f; invRender(); }
+  function reportSearch(v) { invReport.q = v; reportRenderList(); }
+  function reportToggle(id) { invReport.sel[id] = !invReport.sel[id]; reportRenderList(); reportRenderBar(); }
+  function reportSelectAll(flag) {
+    reportVisibleRows().forEach(x => { if (x.baseStock != null) invReport.sel[x.id] = flag; });
+    reportRenderList(); reportRenderBar();
+  }
+  function reportVisibleRows() {
+    const r = invReport, q = r.q.trim().toLowerCase();
+    return r.rows.filter(x => (r.filter === 'all' || x.status === r.filter) &&
+      (!q || (x.name + ' ' + x.sku + ' ' + Object.keys(x.byLoc).join(' ') + ' ' + x.before.join(' ')).toLowerCase().includes(q)))
+      .sort((a, b) => (a.status === 'ok') - (b.status === 'ok') || Math.abs(b.diff || 0) - Math.abs(a.diff || 0));
+  }
+  const STATUS_LBL = { ok: '✓ zgodne', diff: '⚠ różnica', missing: '✕ brakuje', manual: '❓ do decyzji', info: 'bez stanu' };
+
+  function reportRender() {
+    const p = $('inv-panel');
+    const r = invReport;
+    if (!r) {
+      p.innerHTML = `<div class="inv-card"><div class="inv-title">Raport inwentaryzacji</div>
+        <div class="inv-sub">Raport nie jest wygenerowany (np. po odświeżeniu strony).</div>
+        <button class="inv-btn primary" onclick="reportBuild()">Wygeneruj raport</button>
+        <button class="inv-btn" onclick="invBackToCount()">Wróć do liczenia</button></div>`;
+      return;
+    }
+    if (r.building) {
+      p.innerHTML = `<div class="inv-card"><div class="inv-title">Generuję raport…</div><div class="inv-sub">${esc(r.msg)}</div></div>`;
+      return;
+    }
+    const c = reportCounts();
+    const pieces = r.rows.reduce((a, x) => a + x.total, 0);
+    const tab = (k, label) => `<button class="inv-tab ${r.filter === k ? 'on' : ''}" onclick="reportSetFilter('${k}')">${label} <b>${c[k]}</b></button>`;
+    p.innerHTML = `
+      <div class="inv-card">
+        <div class="inv-title">Raport inwentaryzacji</div>
+        <div class="inv-stats"><span><b>${r.rows.filter(x => x.total > 0).length}</b> produktów</span><span><b>${pieces}</b> szt.</span><span><b>${inv.visited.length}</b> lokalizacji</span></div>
+        ${r.note ? `<div class="inv-flash err">${esc(r.note)}</div>` : ''}
+      </div>
+      <div class="inv-tabs">${tab('diff', 'Różnice')}${tab('manual', 'Do decyzji')}${tab('ok', 'Zgodne')}${c.info ? tab('info', 'Bez stanu') : ''}${tab('all', 'Wszystkie')}${tab('unknown', 'Nieznane kody')}</div>
+      <input class="inv-search" id="report-q" type="search" placeholder="Szukaj: nazwa, SKU, lokalizacja…" value="${esc(r.q)}" oninput="reportSearch(this.value)">
+      <div id="report-bar"></div>
+      <div id="report-list"></div>
+      <div class="inv-actions">
+        <button class="inv-btn" onclick="reportCsv()">Pobierz raport (CSV)</button>
+        <button class="inv-btn" onclick="reportVerify()">Sprawdź w bazie</button>
+        <button class="inv-btn" onclick="invBackToCount()">Wróć do liczenia</button>
+        <button class="inv-btn" onclick="invClose()">Zamknij inwentaryzację</button>
+      </div>
+      <div class="verify-box ${r.verify ? '' : 'hidden'}" id="report-verify">${r.verify || ''}</div>`;
+    reportRenderBar(); reportRenderList();
+  }
+
+  function reportRenderBar() {
+    const el = $('report-bar'); if (!el) return;
+    const r = invReport;
+    if (r.filter === 'unknown') { el.innerHTML = ''; return; }
+    const n = r.rows.filter(x => r.sel[x.id]).length;
+    el.innerHTML = `<div class="inv-bar">
+      <button class="ob-btn" onclick="reportSelectAll(true)">Zaznacz widoczne</button>
+      <button class="ob-btn" onclick="reportSelectAll(false)">Odznacz</button>
+      <button class="inv-btn primary" ${n ? '' : 'disabled'} onclick="reportApply()">Zatwierdź zaznaczone (${n})</button>
+    </div>`;
+  }
+
+  function reportRenderList() {
+    const el = $('report-list'); if (!el) return;
+    const r = invReport;
+    if (r.filter === 'unknown') {
+      const k = Object.keys(r.unknown);
+      el.innerHTML = k.length ? k.map(c => `<div class="inv-row"><div class="inv-row-main"><div class="inv-name">${esc(c)}</div><div class="inv-meta">skanów: ${r.unknown[c]} — brak produktu w bazie</div></div></div>`).join('')
+        : '<div class="inv-empty">Brak nieznanych kodów</div>';
+      return;
+    }
+    const rows = reportVisibleRows();
+    if (!rows.length) { el.innerHTML = '<div class="inv-empty">Brak pozycji w tym widoku</div>'; return; }
+    const q = v => esc(JSON.stringify(v));
+    el.innerHTML = rows.map(x => {
+      const locs = Object.keys(x.byLoc).map(l => `${esc(l)} ×${x.byLoc[l]}`).join(' · ') || '(nie zeskanowano)';
+      const dtxt = x.diff == null ? '—' : (x.diff > 0 ? '+' + x.diff : String(x.diff));
+      return `<div class="inv-row rep ${x.status}">
+        <input type="checkbox" ${x.baseStock == null ? 'disabled' : ''} ${invReport.sel[x.id] ? 'checked' : ''} onchange="reportToggle(${q(x.id)})">
+        <div class="inv-row-main">
+          <div class="inv-name">${esc(x.name || x.id)} <span class="st-badge ${x.status}">${STATUS_LBL[x.status]}</span></div>
+          <div class="inv-meta">${esc(x.sku)} · policzone <b>${x.total}</b> · w Base <b>${x.baseStock == null ? '?' : x.baseStock}</b> · różnica <b>${dtxt}</b></div>
+          <div class="inv-meta">zapisane lokalizacje: <b>${esc(x.scanned.join(', ') || '—')}</b></div>
+          <div class="inv-meta dim">przed: ${esc(x.before.join(', ') || '—')}${x.unv.length ? ' · nie odwiedzono: ' + esc(x.unv.join(', ')) : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function downloadFile(name, text, type) {
+    const blob = new Blob([text], { type: type || 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function stamp() { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
+
+  function reportCsv() {
+    const r = invReport;
+    const cell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const head = ['Produkt', 'SKU', 'ID', 'Policzone', 'Zapisane lokalizacje', 'Stan w Base', 'Różnica', 'Status', 'Lokalizacje przed', 'Lokalizacje po', 'Nieodwiedzone'];
+    const lines = [head.map(cell).join(';')];
+    r.rows.forEach(x => lines.push([x.name, x.sku, x.id, x.total, x.scanned.join(', '),
+      x.baseStock == null ? '' : x.baseStock, x.diff == null ? '' : x.diff, STATUS_LBL[x.status], x.before.join('; '), x.after.join('; '), x.unv.join('; ')].map(cell).join(';')));
+    Object.keys(r.unknown).forEach(c => lines.push(['NIEZNANY KOD', c, '', r.unknown[c], '', '', '', '', '', '', ''].map(cell).join(';')));
+    downloadFile(`inwentaryzacja-${stamp()}.csv`, '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  }
+
+  function reportApply() {
+    const r = invReport;
+    const chosen = r.rows.filter(x => r.sel[x.id] && x.baseStock != null);
+    if (!chosen.length) return;
+    // kopia bezpieczeństwa — pobierana zawsze przed zapisem
+    downloadFile(`kopia-stanow-${stamp()}.json`, JSON.stringify({
+      createdAt: new Date().toISOString(), warehouse: cfg.warehouseId, inventory: cfg.inventoryId,
+      products: chosen.map(x => ({ id: x.id, name: x.name, sku: x.sku, stockBefore: x.baseStock, locationsBefore: x.before, stockNew: x.newStock }))
+    }, null, 2), 'application/json');
+    const zero = chosen.filter(x => x.newStock === 0).length;
+    if (!confirm(`Zapisać nowe stany dla ${chosen.length} produktów?` + (zero ? `\n\nUWAGA: ${zero} produktów dostanie stan 0.` : '') + '\n\nKopia dotychczasowych stanów została pobrana.')) return;
+    chosen.forEach(x => {
+      inv.applied[x.id] = x.newStock;
+      enqueueStock({ id: x.id, name: x.name, sku: x.sku }, x.newStock, inv.modeKey);
+    });
+    invSave();
+    r.applied = true;
+    r.verify = `Wysłano do kolejki: ${chosen.length} zmian stanów. Po zakończeniu kliknij „Sprawdź w bazie".`;
+    invRender();
+  }
+
+  async function reportVerify() {
+    const r = invReport;
+    const box = $('report-verify');
+    box.classList.remove('hidden');
+    box.innerHTML = 'Czekam na opróżnienie kolejki…';
+    while (outbox.some(j => j.status === 'pending' || j.status === 'sending')) await delay(500);
+    const be = backendFor(inv.modeKey);
+    const ids = [...new Set([...Object.keys(inv.applied), ...Object.keys(inv.counts).filter(id => invTotal(inv.counts[id]) > 0)])];
+    if (!ids.length) { box.innerHTML = 'Nie ma czego sprawdzać.'; return; }
+    box.innerHTML = `Sprawdzam ${ids.length} produktów w bazie…`;
+    let st;
+    try { st = await be.readState(ids, (a, b) => { box.innerHTML = `Sprawdzam w bazie: ${a}/${b}`; }); }
+    catch (e) { box.innerHTML = 'Błąd odczytu z bazy: ' + esc(e.message || e); return; }
+    let ok = 0; const bad = [];
+    for (const id of ids) {
+      const e = inv.counts[id], s = st[id];
+      if (!s) { bad.push(`${esc((e && e.name) || id)}: nie odczytano z bazy`); continue; }
+      const probs = [];
+      if (e && e.sentLocs && !sameLocs(s.locs, e.sentLocs)) probs.push(`lokalizacje: wysłano ${esc(e.sentLocs.join(', ') || '—')}, w bazie ${esc(s.locs.join(', ') || '—')}`);
+      if (inv.applied[id] !== undefined && s.stock !== null && s.stock !== inv.applied[id]) probs.push(`stan: zatwierdzono ${inv.applied[id]}, w bazie ${s.stock}`);
+      if (probs.length) bad.push(`${esc((e && e.name) || id)} — ${probs.join('; ')}`); else ok++;
+    }
+    box.innerHTML = `<span class="v-ok">✓ ${ok} zgodnych</span>` + (bad.length ? ` · <span class="v-bad">✕ ${bad.length} niezgodnych</span>` : '') +
+      bad.map(b => `<div class="verify-row"><div class="ob-sub">${b}</div></div>`).join('');
+    r.verify = box.innerHTML;
+  }
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // ══ PRZENOSZENIE PRODUKTÓW ═══════════════════════════════════════════════
+  const MV_KEY = 'bl_move_v1';
+  let mv = { step: 'product', product: null, source: null, target: null, sourceWarn: false, history: [], msg: null, verify: '' };
+  let mvQueue = [], mvBusy = false, mvMsgTimer = null;
+
+  function mvLoad() { try { mv.history = JSON.parse(localStorage.getItem(MV_KEY) || '[]'); } catch(e) { mv.history = []; } }
+  function mvSaveHist() { try { localStorage.setItem(MV_KEY, JSON.stringify(mv.history.slice(0, 50))); } catch(e) {} }
+  function mvReset() { mv.step = 'product'; mv.product = null; mv.source = null; mv.target = null; mv.sourceWarn = false; }
+  function mvFlash(text, err) {
+    mv.msg = { text, err: !!err };
+    clearTimeout(mvMsgTimer);
+    mvMsgTimer = setTimeout(() => { mv.msg = null; mvRender(); }, 3500);
+    mvRender();
+  }
+  function mvEnqueue(c) { mvQueue.push(c); if (!mvBusy) mvProcess(); }
+  async function mvProcess() {
+    mvBusy = true;
+    try {
+      while (mvQueue.length) {
+        const c = mvQueue.shift();
+        try { await mvScan(c); } catch (e) { mvFlash('Błąd: ' + (e.message || e), true); soundError(); }
+      }
+    } finally { mvBusy = false; }
+  }
+  function isKnownLoc(code) {
+    const r = resolveLocation(code);
+    const known = Object.values(LOCATION_MAP).includes(r) ||
+      Object.keys(LOCATION_MAP).some(k => k.toUpperCase() === code.trim().toUpperCase());
+    return known ? r : null;
+  }
+
+  async function mvScan(code) {
+    if (mv.step === 'choose') { mvFlash('Wybierz przyciskiem: przeniesiono wszystkie / zostały jeszcze', true); soundError(); return; }
+    const loc = isKnownLoc(code);
+    if (!loc) {
+      if (/^BLL_/i.test(code)) { mvFlash('Nieznana lokalizacja: ' + code, true); soundError(); return; }
+      // kod produktu (także w środku przenoszenia = zaczynamy od nowa z tym produktem)
+      let product = null;
+      try { product = await lookupProduct(code, { withLocs: true }); }
+      catch (e) { mvFlash('Błąd połączenia: ' + (e.message || e) + ' — zeskanuj ponownie', true); soundError(); return; }
+      if (!product) { mvFlash('Nie znaleziono produktu: ' + code, true); soundError(); return; }
+      mvReset();
+      mv.product = product; mv.step = 'source';
+      soundProductFound(); mvRender();
+      return;
+    }
+    if (mv.step === 'product') { mvFlash('Najpierw zeskanuj produkt', true); soundError(); return; }
+    if (mv.step === 'source') { mvSetSource(loc); soundLocationScanned(); return; }
+    if (mv.step === 'target') {
+      if (mv.source && loc.toUpperCase() === mv.source.toUpperCase()) { mvFlash('Lokalizacja docelowa jest taka sama jak źródłowa', true); soundError(); return; }
+      mv.target = loc;
+      soundLocationScanned();
+      if ((mv.product.stock || 0) > 1 && !mv.sourceWarn) { mv.step = 'choose'; mvRender(); return; }
+      mvCommit(!mv.sourceWarn);
+    }
+  }
+
+  function mvSetSource(loc) {
+    if (loc === null) { mv.source = null; mv.sourceWarn = true; }
+    else {
+      mv.source = loc;
+      mv.sourceWarn = !(mv.product.existingLocs || []).some(l => l.toUpperCase() === loc.toUpperCase());
+    }
+    mv.step = 'target';
+    mvRender();
+  }
+  function mvPickSource(i) {
+    if (mv.step !== 'source' || !mv.product) return;
+    if (i < 0) { mvSetSource(null); soundLocationScanned(); return; }
+    const l = (mv.product.existingLocs || [])[i];
+    if (l) { mvSetSource(l); soundLocationScanned(); }
+  }
+  function mvChoose(removeSource) { if (mv.step === 'choose') mvCommit(removeSource); }
+
+  function mvCommit(removeSource) {
+    const pr = mv.product;
+    let locs = [...(pr.existingLocs || [])];
+    if (removeSource && mv.source) locs = locs.filter(l => l.toUpperCase() !== mv.source.toUpperCase());
+    if (!locs.some(l => l.toUpperCase() === mv.target.toUpperCase())) locs.push(mv.target);
+    const job = enqueueSave(pr, locs);
+    mv.history.unshift({ id: pr.id, name: pr.name || '', sku: pr.sku || '', to: mv.target,
+                         kept: !removeSource, from: mv.source || '?', expected: locs, jobId: job.id, ts: Date.now() });
+    if (mv.history.length > 50) mv.history.pop();
+    mvSaveHist();
+    soundSaved();
+    const msg = removeSource ? `Przeniesiono: ${mv.source} → ${mv.target}` : `Dodano ${mv.target}` + (mv.source ? ` (${mv.source} zostaje)` : ' (źródło nieznane — nic nie usunięto)');
+    mvReset();
+    mvFlash(msg, false);
+  }
+  function mvCancel() { mvReset(); mvRender(); refocus(); }
+
+  function mvStatus(h) {
+    const j = h.jobId ? outbox.find(x => x.id === h.jobId) : null;
+    return !j ? '✓' : (j.status === 'failed' ? '✕' : '⏳');
+  }
+
+  function mvRender() {
+    const p = $('move-panel');
+    if (!p || appMode !== 'MOVE') return;
+    const pr = mv.product;
+    const steps = { product: 'Krok 1 z 3 — zeskanuj PRODUKT', source: 'Krok 2 z 3 — zeskanuj lokalizację, Z KTÓREJ zabierasz',
+                    target: 'Krok 3 z 3 — zeskanuj lokalizację DOCELOWĄ', choose: 'Ile sztuk zostało na starej lokalizacji?' };
+    const hist = mv.history.slice(0, 15);
+    p.innerHTML = `
+      <div class="inv-card">
+        <div class="inv-title">${steps[mv.step]}</div>
+        ${pr ? `<div><div class="inv-name"><b>${esc(pr.name || pr.id)}</b></div>
+          <div class="inv-meta">${esc(pr.sku || '')} · stan w Base: <b>${pr.stock != null ? pr.stock : '?'}</b> · lokalizacje: <b>${esc((pr.existingLocs || []).join(', ') || '—')}</b></div></div>` : ''}
+        ${mv.step === 'source' && pr ? `<div class="inv-actions">
+            <div class="inv-meta">Wybierz, z której lokalizacji zabierasz produkt (albo zeskanuj ją):</div>
+            ${(pr.existingLocs || []).map((l, i) => `<button class="inv-btn primary lock-allow" onclick="mvPickSource(${i})">${esc(l)}</button>`).join('') || '<div class="inv-meta">Base nie ma zapisanej żadnej lokalizacji tego produktu.</div>'}
+            <button class="inv-btn lock-allow" onclick="mvPickSource(-1)">Nie wiem / inna lokalizacja</button>
+          </div>` : ''}
+        ${(mv.step === 'target' || mv.step === 'choose') ? `<div class="inv-meta">z: <b>${esc(mv.source || 'nieznana')}</b>${mv.target ? ' → do: <b>' + esc(mv.target) + '</b>' : ''}</div>` : ''}
+        ${mv.step === 'target' && mv.sourceWarn ? `<div class="inv-flash err">${mv.source ? 'Base nie ma tego produktu na ' + esc(mv.source) + '.' : 'Źródło nieznane.'} Dodam tylko lokalizację docelową, a nic nie usunę.</div>` : ''}
+        ${mv.msg ? `<div class="inv-flash ${mv.msg.err ? 'err' : ''}">${esc(mv.msg.text)}</div>` : ''}
+        ${mv.step === 'choose' ? `<div class="inv-actions">
+            <button class="inv-btn primary lock-allow" onclick="mvChoose(true)">Przeniesiono wszystkie<br><small>${esc(mv.source)} zostanie usunięta</small></button>
+            <button class="inv-btn lock-allow" onclick="mvChoose(false)">Zostały jeszcze na tej lokalizacji<br><small>${esc(mv.source)} zostaje, dochodzi ${esc(mv.target)}</small></button>
+          </div>` : ''}
+        ${mv.step !== 'product' ? `<button class="inv-btn" onclick="mvCancel()">Anuluj</button>` : ''}
+      </div>
+      ${hist.length ? `<div class="inv-list"><div class="history-title">Ostatnie przeniesienia</div>${hist.map(h => `
+        <div class="inv-row"><div class="inv-row-main"><div class="inv-name">${esc(h.name || h.id)}</div>
+        <div class="inv-meta">${esc(h.from)} → ${esc(h.to)}${h.kept ? ' (źródło zostaje)' : ''}</div></div><div class="inv-qty" style="font-size:16px">${mvStatus(h)}</div></div>`).join('')}</div>
+      <button class="inv-btn" onclick="mvVerify()">Sprawdź w bazie</button>` : ''}
+      <div class="verify-box ${mv.verify ? '' : 'hidden'}" id="move-verify">${mv.verify}</div>`;
+  }
+
+  async function mvVerify() {
+    const box = $('move-verify'); box.classList.remove('hidden');
+    box.innerHTML = 'Czekam na opróżnienie kolejki…';
+    while (outbox.some(j => j.status === 'pending' || j.status === 'sending')) await delay(500);
+    const latest = {};
+    [...mv.history].reverse().forEach(h => { latest[String(h.id)] = h; });   // ostatnie przeniesienie każdego produktu
+    const ids = Object.keys(latest);
+    if (!ids.length) { box.innerHTML = 'Nie ma czego sprawdzać.'; return; }
+    let got;
+    try { got = await getBackend().readLocations(ids); } catch (e) { box.innerHTML = 'Błąd odczytu z bazy: ' + esc(e.message || e); return; }
+    let ok = 0; const bad = [];
+    ids.forEach(id => {
+      const h = latest[id];
+      if (got[id] && sameLocs(got[id], h.expected)) ok++;
+      else bad.push(`${esc(h.name || id)}: oczekiwano ${esc(h.expected.join(', ') || '—')}, w bazie ${esc(got[id] ? (got[id].join(', ') || '—') : 'nie odczytano')}`);
+    });
+    mv.verify = `<span class="v-ok">✓ ${ok} zgodnych</span>` + (bad.length ? ` · <span class="v-bad">✕ ${bad.length} niezgodnych</span>` : '') +
+      bad.map(b => `<div class="verify-row"><div class="ob-sub">${b}</div></div>`).join('');
+    box.innerHTML = mv.verify;
+  }
+
+  // ══ BLOKADA EKRANU ═══════════════════════════════════════════════════════
+  let screenLocked = false, lockHoldTimer = null;
+  const LOCK_EVENTS = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'touchmove', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'wheel'];
+  function lockBlocker(e) {
+    if (!screenLocked) return;
+    if (e.target && e.target.closest && e.target.closest('.lock-allow')) return;
+    e.preventDefault(); e.stopPropagation();
+  }
+  LOCK_EVENTS.forEach(ev => document.addEventListener(ev, lockBlocker, { capture: true, passive: false }));
+
+  function lockScreen() {
+    if (settingsOpen) toggleSettings();
+    screenLocked = true;
+    document.body.classList.add('locked');
+    $('lock-bar').classList.remove('hidden');
+    lockEnterFullscreen();
+    try { window.history.pushState({ lock: 1 }, ''); } catch(e) {}
+    invWake();
+    refocus();
+  }
+  function lockStandalone() {
+    try { return matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch(e) { return false; }
+  }
+  async function lockEnterFullscreen() {
+    const el = document.documentElement;
+    try {
+      if (!document.fullscreenElement) {
+        if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      }
+    } catch(e) {}
+    lockUpdateBar();
+  }
+  function lockUpdateBar() {
+    const w = $('lock-warn'); if (!w) return;
+    const ok = lockStandalone() || !!document.fullscreenElement;
+    w.classList.toggle('hidden', ok || !screenLocked);
+  }
+  document.addEventListener('fullscreenchange', lockUpdateBar);
+  // skaner wpisuje znaki z klawiatury — to też „gest użytkownika", więc po wyjściu z pełnego ekranu wracamy do niego
+  document.addEventListener('keydown', () => { if (screenLocked && !document.fullscreenElement && !lockStandalone()) lockEnterFullscreen(); }, true);
+  window.addEventListener('popstate', () => { if (screenLocked) { try { window.history.pushState({ lock: 1 }, ''); } catch(e) {} } });
+  function unlockScreen() {
+    screenLocked = false;
+    document.body.classList.remove('locked');
+    $('lock-bar').classList.add('hidden');
+    $('lock-fill').style.width = '0';
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch(e) {}
+    if (!(appMode === 'INV' && inv && inv.active)) invWakeOff();
+    refocus();
+  }
+  function lockHoldStart(e) {
+    e.preventDefault();
+    const fill = $('lock-fill');
+    fill.style.transition = 'width 1.5s linear'; fill.style.width = '100%';
+    clearTimeout(lockHoldTimer);
+    lockHoldTimer = setTimeout(unlockScreen, 1500);
+  }
+  function lockHoldEnd() {
+    clearTimeout(lockHoldTimer);
+    const fill = $('lock-fill'); fill.style.transition = 'none'; fill.style.width = '0';
+  }
+  // ═════════════════════════════════════════════════════════════════════════
+
+  async function handleScan(code) {
+    code = code.trim();
+    if (appMode === 'INV') { $('scan-field').value = ''; if (code) invEnqueueScan(code); return; }
+    if (appMode === 'MOVE') { $('scan-field').value = ''; if (code) mvEnqueue(code); return; }
+    if (!code || appState === STATES.SAVING) return;
+    $('scan-field').value = '';
+
+    if (appState === STATES.PRODUCT) {
+      appState = STATES.SAVING;
+      renderState(STATES.SAVING, null, null);
+      let product = null;
+      try { product = await lookupProduct(code); } catch (e) { product = null; }
+      if (!product) {
+        cntErr++;
+        updateCounters();
+        soundError();
+        appState = STATES.ERROR;
+        renderState(STATES.ERROR);
+        await delay(2000);
+        appState = STATES.PRODUCT;
+        renderState(STATES.PRODUCT);
+      } else {
+        currentProduct = product;
+        // Inicjalizuj istniejące lokalizacje gdy stock > 1
+        existingLocs = (product.stock > 1 && product.existingLocs) ? [...product.existingLocs] : [];
+        originalLocs = [...existingLocs]; // kopia oryginalna do wykrywania zmian
+        soundProductFound();
+        $('cancel-btn').classList.remove('hidden');
+        appState = STATES.LOCATION;
+        renderState(STATES.LOCATION, product, null);
+        renderExistingLocs();
+      }
+    } else if (appState === STATES.LOCATION) {
+      const resolvedLoc = resolveLocation(code);
+
+      // Smart: jeśli zeskanowany kod wygląda jak produkt (nie lokalizacja) — traktuj jako nowy produkt
+      const isKnownLocation = Object.values(LOCATION_MAP).includes(resolvedLoc);
+      const looksLikeLocation = isKnownLocation ||
+        Object.keys(LOCATION_MAP).some(k => k.toUpperCase() === code.trim().toUpperCase());
+
+      if (!looksLikeLocation) {
+        clearTimeout(locationTimer);
+        locationTimer = null;
+
+        // Sprawdź czy cokolwiek się zmieniło — nowe lokalizacje LUB usunięcia z existingLocs
+        const locsWereRemoved = existingLocs.length < originalLocs.length;
+        const hasNewLocs = pendingLocations.length > 0;
+
+        if (hasNewLocs || locsWereRemoved) {
+          // Połącz istniejące (po edycji) z nowymi zeskanowanymi
+          const allLocs = [...existingLocs];
+          for (const loc of pendingLocations) {
+            if (!allLocs.includes(loc)) allLocs.push(loc);
+          }
+          const savedProduct = currentProduct;
+          const displayLocs = allLocs.length > 0 ? allLocs.join(', ') : '(usunięto lokalizacje)';
+          const job = enqueueSave(savedProduct, allLocs);   // wysyłka w tle — bez czekania
+          history.unshift({ product: savedProduct, location: displayLocs, jobId: job.id });
+          if (history.length > 15) history.pop();
+          renderHistory();
+          soundSaved();
+        }
+
+        // Reset i przejdź do nowego produktu
+        currentProduct = null;
+        pendingLocations = [];
+        existingLocs = [];
+        originalLocs = [];
+        $('cancel-btn').classList.add('hidden');
+        $('save-product-btn').classList.add('hidden');
+        $('multi-stock-warning').classList.add('hidden');
+        appState = STATES.PRODUCT;
+        await handleScan(code);
+        return;
+      }
+
+      // Sprawdź czy lokalizacja istnieje w słowniku
+      if (!isKnownLocation) {
+        soundError();
+        renderState(STATES.ERROR, currentProduct, null, `Nieznana lokalizacja: ${code}`);
+        await delay(2000);
+        renderState(STATES.LOCATION, currentProduct, pendingLocations.length ? pendingLocations.join(', ') : null);
+        focusTrap();
+        return;
+      }
+
+      // Dodaj do listy lokalizacji
+      if (!pendingLocations.includes(resolvedLoc)) {
+        pendingLocations.push(resolvedLoc);
+      }
+      soundLocationScanned();
+      // Pokaż zebrane lokalizacje
+      renderState(STATES.LOCATION, currentProduct, pendingLocations.join(', '));
+
+      // Resetuj timer — 10 sekund od ostatniego skanu
+      clearTimeout(locationTimer);
+      locationTimer = setTimeout(async () => {
+        if (appState !== STATES.LOCATION) return;
+        // Połącz istniejące lokalizacje z nowymi (bez duplikatów)
+        const allLocs = [...existingLocs];
+        for (const loc of pendingLocations) {
+          if (!allLocs.includes(loc)) allLocs.push(loc);
+        }
+        const savedProduct = currentProduct;
+        const displayLocs = allLocs.join(', ');
+        const job = enqueueSave(savedProduct, allLocs);   // wysyłka w tle
+        history.unshift({ product: savedProduct, location: displayLocs, jobId: job.id });
+        if (history.length > 15) history.pop();
+        renderHistory();
+        soundSaved();
+        appState = STATES.SUCCESS;
+        renderState(STATES.SUCCESS, savedProduct, displayLocs);
+        currentProduct = null;
+        pendingLocations = [];
+        existingLocs = [];
+        originalLocs = [];
+        $('cancel-btn').classList.add('hidden');
+        $('save-product-btn').classList.add('hidden');
+        $('multi-stock-warning').classList.add('hidden');
+        await delay(600);
+        appState = STATES.PRODUCT;
+        renderState(STATES.PRODUCT);
+        focusTrap();
+      }, 10000);
+    }
+    focusTrap();
+  }
+
+  function handleManual() {
+    const v = $('scan-field').value.trim();
+    if (v) {
+      $('scan-field').value = '';
+      handleScan(v);
+    }
+  }
+
+  function submitScanField() {
+    handleManual();
+  }
+
+  function renderHistory() {
+    const wrap = $('history-wrap');
+    const list = $('history-list');
+    const btn = $('reset-btn');
+    if (!history.length) {
+      wrap.classList.add('hidden');
+      btn.classList.add('hidden');
+      return;
+    }
+    wrap.classList.remove('hidden');
+    btn.classList.remove('hidden');
+    list.innerHTML = history.map(h => {
+      const j = h.jobId ? outbox.find(x => x.id === h.jobId) : null;
+      const st = !j ? '✓' : (j.status === 'failed' ? '✕' : '⏳');
+      return `
+      <div class="history-item">
+        <div class="h-name">${esc(h.product.name || h.product.id)}</div>
+        <div class="h-loc">${st} ${esc(h.location)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function resetAll() {
+    if (!sessionVerified && Object.keys(sessionLog).length &&
+        !confirm('Nie sprawdziłeś tej sesji w bazie („Sprawdź sesję w bazie"). Zresetować mimo to?')) return;
+    sessionLog = {}; sessionVerified = true;
+    $('verify-box').classList.add('hidden');
+    persistOutbox();   // kolejka niewysłanych zostaje — reset jej nie kasuje
+    history = []; cntDone = 0; cntErr = 0; currentProduct = null;
+    pendingLocations = [];
+    existingLocs = [];
+    originalLocs = [];
+    clearTimeout(locationTimer);
+    locationTimer = null;
+    $('multi-stock-warning').classList.add('hidden');
+    $('save-product-btn').classList.add('hidden');
+    appState = STATES.PRODUCT;
+    updateCounters();
+    renderOutbox();
+    renderState(STATES.PRODUCT);
+    renderHistory();
+    refocus();
+  }
+
+  function cancelProduct() {
+    clearTimeout(locationTimer);
+    locationTimer = null;
+    currentProduct = null;
+    pendingLocations = [];
+    existingLocs = [];
+    originalLocs = [];
+    appState = STATES.PRODUCT;
+    renderState(STATES.PRODUCT);
+    $('cancel-btn').classList.add('hidden');
+    $('save-product-btn').classList.add('hidden');
+    $('multi-stock-warning').classList.add('hidden');
+    refocus();
+  }
+
+  // ── Focus management ──────────────────────────────────────────────────────
+  function refocus() {
+    if (settingsOpen || reportOpen()) return;
+    const field = $('scan-field');
+    field.value = '';
+    field.focus();
+  }
+
+  function focusTrap() { refocus(); }
+
+  // Skaner wpisuje do scan-field — nasłuchuj na Enter
+  $('scan-field').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const v = this.value.trim();
+      this.value = '';
+      if (v) handleScan(v);
+    }
+  });
+
+  // Gdy fokus opuści scan-field (np. po kliknięciu przycisku) — wróć
+  $('scan-field').addEventListener('blur', function() {
+    if (settingsOpen || reportOpen()) return;
+    // Krótkie opóźnienie żeby przyciski zdążyły się wykonać
+    setTimeout(() => {
+      if (!settingsOpen && document.activeElement !== $('scan-field')) {
+        $('scan-field').focus();
+      }
+    }, 150);
+  });
+
+  // Kliknięcie poza ustawieniami — wróć do pola
+  document.addEventListener('click', function(e) {
+    if (settingsOpen || reportOpen()) return;
+    if (e.target.closest('#settings-screen') || e.target.closest('.settings-btn')) return;
+    if (e.target !== $('scan-field')) {
+      setTimeout(() => $('scan-field').focus(), 100);
+    }
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
+  loadCfg();
+  invLoad();
+  loadOutbox();
+  updateCounters();
+  renderOutbox();
+  renderState(STATES.PRODUCT);
+  kickWorker();   // wznów wysyłkę po odświeżeniu strony
+  mvLoad();
+  (function(){ const h = $('lock-hold');
+    ['pointerdown'].forEach(ev => h.addEventListener(ev, lockHoldStart));
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => h.addEventListener(ev, lockHoldEnd));
+    h.addEventListener('contextmenu', e => e.preventDefault());
+  })();
+  try {
+    const sm = localStorage.getItem('bl_mode');
+    if ((inv && inv.active) || sm === 'INV') setMode('INV'); else if (sm === 'MOVE') setMode('MOVE');
+  } catch(e) {}
+  if (inv && inv.active && inv.stage === 'count' && inv.pending && inv.pending.length) {
+    const again = [...inv.pending]; inv.pending = []; again.forEach(c => invEnqueueScan(c));
+  }
+  // Focus przy starcie
+  setTimeout(() => $('scan-field').focus(), 300);
+</script>
+</body>
+</html>
